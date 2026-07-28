@@ -18,15 +18,30 @@
   function getKey() { return localStorage.getItem(KEY_STORE) || ''; }
   function setKey(k) { localStorage.setItem(KEY_STORE, k || ''); }
 
+  // 只看版本號會漏：加了新維度但版本沒動時，舊素材少了那一維卻被當成已標記。
+  // 所以同時檢查「該有的維度是不是都在」。
+  var extraDims = [];
+  function setExtraDims(list) { extraDims = (list || []).slice(); }
+  function expectedDims() { return ALL_DIMS.concat(extraDims); }
+
   function pending(materials) {
-    return materials.filter(function (m) { return (m.tag_version || 0) < TAG_VERSION; });
+    var want = expectedDims();
+    return materials.filter(function (m) {
+      if ((m.tag_version || 0) < TAG_VERSION) return true;
+      var t = m.tags || {};
+      for (var i = 0; i < want.length; i++) {
+        if (t[want[i]] == null || t[want[i]] === '') return true;
+      }
+      return false;
+    });
   }
   function estimateCost(n) { return n * COST_PER_MATERIAL_TWD; }
 
   function buildPrompt(names) {
+    var want = expectedDims();
     return '你是行銷素材分析助理。以下是素材名稱清單，命名規則為 格式_視覺類型_素材切角_賣點_走期。\n' +
-      '請針對每一個素材，就下列 ' + ALL_DIMS.length + ' 個維度給出判斷。\n\n' +
-      '維度清單：\n' + ALL_DIMS.map(function (d, i) { return (i + 1) + '. ' + d; }).join('\n') + '\n\n' +
+      '請針對每一個素材，就下列 ' + want.length + ' 個維度給出判斷。\n\n' +
+      '維度清單：\n' + want.map(function (d, i) { return (i + 1) + '. ' + d; }).join('\n') + '\n\n' +
       '規則：\n' +
       '- 只輸出 JSON 陣列，不要任何說明文字或 markdown 標記\n' +
       '- 每個元素格式：{"name":"素材名稱","tags":{"維度名":"判斷值"}}\n' +
@@ -113,7 +128,7 @@
 
   global.AI = {
     TAG_VERSION: TAG_VERSION, TAG_SCHEMA: TAG_SCHEMA, ALL_DIMS: ALL_DIMS,
-    getKey: getKey, setKey: setKey,
+    getKey: getKey, setKey: setKey, setExtraDims: setExtraDims, expectedDims: expectedDims,
     pending: pending, estimateCost: estimateCost,
     buildPrompt: buildPrompt, normalizeAiText: normalizeAiText,
     callGemini: callGemini, tagBatch: tagBatch

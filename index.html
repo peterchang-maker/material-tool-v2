@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>素材成效分析 v2</title>
-<link rel="stylesheet" href="style.css?v=4">
+<link rel="stylesheet" href="style.css?v=6">
 </head>
 <body>
 
@@ -118,6 +118,8 @@
     </div>
 
     <div class="tabpage" data-page="dims" hidden>
+      <div id="name-check"></div>
+
       <section class="panel">
         <div class="panel-head"><h2>維度表現</h2>
           <select id="dim-select">
@@ -129,14 +131,24 @@
         </div>
         <div id="dim-table"></div>
       </section>
-      <section class="panel todo">
-        <h2>還沒搬過來</h2>
-        <ul>
-          <li>特徵 × 實際成效圖版</li>
-          <li>維度共通性排行</li>
-          <li>自訂三層維度管理</li>
-          <li>命名規則檢查</li>
-        </ul>
+
+      <section class="panel">
+        <div class="panel-head"><h2>特徵 × 實際成效</h2>
+          <label class="inline">曝光門檻
+            <input type="number" id="impr-thr" min="0" step="500" style="width:100px">
+          </label>
+        </div>
+        <div id="feature-cross"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2>維度共通性排行</h2></div>
+        <div id="commonality"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2>自訂維度</h2></div>
+        <div id="custom-dims"></div>
       </section>
     </div>
 
@@ -202,12 +214,13 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-<script src="cloud.js?v=4"></script>
-<script src="data.js?v=4"></script>
-<script src="ai.js?v=4"></script>
-<script src="images.js?v=4"></script>
-<script src="gallery.js?v=4"></script>
-<script src="tabs.js?v=4"></script>
-<script src="ui.js?v=4"></script>
+<script src="cloud.js?v=6"></script>
+<script src="data.js?v=6"></script>
+<script src="ai.js?v=6"></script>
+<script src="images.js?v=6"></script>
+<script src="gallery.js?v=6"></script>
+<script src="dims.js?v=6"></script>
+<script src="tabs.js?v=6"></script>
+<script src="ui.js?v=6"></script>
 </body>
 </html>

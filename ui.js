@@ -229,12 +229,26 @@
       '<div class="empty">還沒有素材。先匯入成效表，再按「從 Excel 抽圖」把圖片帶進來。</div>';
   }
 
+  function syncExtraDims() {
+    if (!global.AI || !AI.setExtraDims) return;
+    AI.setExtraDims((S.dimensions || [])
+      .filter(function (d) { return d.layer === 1 || d.layer === 2; })
+      .map(function (d) { return d.name; }));
+  }
+
   function renderAll() {
     renderFilters(); renderFreshness();
     var rows = filtered();
-    if (!S.materials.length) { renderEmpty(); return; }
+    if (!S.materials.length) {
+      renderEmpty();
+      if (global.Dims) Dims.render({ rows: [], byKey: {}, materials: [], market: S.market, dimensions: S.dimensions });
+      return;
+    }
+    syncExtraDims();
     renderKPI(rows); renderDim(rows); renderMaterials(rows); renderTrendSelect(rows);
-    if (global.Gallery) Gallery.render({ rows: rows, byKey: S.byKey, materials: S.materials, market: S.market });
+    var ctx = { rows: rows, byKey: S.byKey, materials: S.materials, market: S.market, dimensions: S.dimensions };
+    if (global.Gallery) Gallery.render(ctx);
+    if (global.Dims) Dims.render(ctx);
   }
 
   function renderKPI(rows) {
@@ -266,6 +280,18 @@
     $('dim-table').innerHTML = html + '</tbody></table></div>';
   }
   $('dim-select').addEventListener('change', renderAll);
+  if ($('impr-thr')) {
+    $('impr-thr').value = localStorage.getItem('mt2_impr_threshold') || 3000;
+    $('impr-thr').addEventListener('change', function () {
+      localStorage.setItem('mt2_impr_threshold', this.value);
+      renderAll();
+    });
+  }
+  global.__reload = function () {
+    return Cloud.loadAll(sinceDate()).then(function (fresh) {
+      apply(fresh, new Date().toISOString());
+    });
+  };
   ['g-mode', 'g-onlyimg', 'g-who', 'g-comp'].forEach(function (id) {
     if ($(id)) $(id).addEventListener('change', function () {
       if (global.Gallery) Gallery.render({ rows: filtered(), byKey: S.byKey, materials: S.materials, market: S.market });
