@@ -132,7 +132,7 @@
   }
 
   /* 看圖標籤：競品素材的名稱沒有語意，只能靠圖片判斷 */
-  function callGeminiVision(base64, dims) {
+  function callGeminiVision(base64, dims, mime) {
     var key = getKey();
     if (!key) return Promise.reject(new Error('尚未設定 Gemini API Key'));
     var prompt = '請看這張廣告素材圖，就下列 ' + dims.length + ' 個維度給出判斷。\n' +
@@ -146,7 +146,7 @@
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         contents: [{ parts: [
-          { inline_data: { mime_type: 'image/jpeg', data: base64 } },
+          { inline_data: { mime_type: mime || 'image/jpeg', data: base64 } },
           { text: prompt }
         ] }],
         generationConfig: { temperature: 0.2, maxOutputTokens: 2048 }

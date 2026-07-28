@@ -75,7 +75,9 @@
       var f = extractAd(it);
       if (!f.image) { noImage++; return; }
       var comp = String(f.advertiser || '未命名').slice(0, 60);
-      var id = 'ap' + djb2(String(f.id || f.image) + '|' + f.image);
+      // 同一支廣告第二次抓回來時，CDN 網址常會多出尺寸參數。
+      // 編號若混進網址，同一支廣告會被當成新素材，存活天數就永遠算不出來。
+      var id = 'ap' + djb2(f.id ? 'id:' + f.id : 'img:' + String(f.image).split('?')[0]);
       rows.push({
         competitor: comp,
         material_key: id,
@@ -95,7 +97,30 @@
             n.noImage + ' 筆沒有圖片（純文字或影片廣告）。');
       return Promise.resolve(0);
     }
-    var merged = Data.mergeMarket(n.rows, ctx.market);
+
+    // 抓回來的廣告主名稱如果全部一樣或全是「未命名」，多半是來源本身沒帶這個欄位
+    // （Meta 書籤就是這種情況）。這時候問一次，總比整批掛在同一個假名字下好。
+    var comps = {};
+    n.rows.forEach(function (r) { comps[r.competitor] = 1; });
+    var names = Object.keys(comps);
+    if (names.length === 1 && (names[0] === '未命名' || label === '匯入')) {
+      var input = prompt('這批素材要歸給哪個競品？', names[0] === '未命名' ? '' : names[0]);
+      if (input === null) return Promise.resolve(0);
+      var chosen = input.trim() || names[0];
+      n.rows.forEach(function (r) { r.competitor = chosen; });
+    }
+
+    var imgByKey = {};
+    n.rows.forEach(function (r) { imgByKey[r.competitor + '|' + r.material_key] = r.image_url; });
+
+    var merged = Data.mergeMarket(n.rows, ctx.market).map(function (r) {
+      var url = imgByKey[r.competitor + '|' + r.material_key];
+      // 合併只處理日期，圖片網址要自己補回去，否則競品素材會全部沒有圖
+      return url ? Object.assign({}, r, { image_url: url }) : r;
+    });
+
+    // upsert 要求每筆的欄位一致，補齊缺的那個鍵
+    merged.forEach(function (r) { if (!('image_url' in r)) r.image_url = null; });
     return Cloud.saveMarket(merged).then(function () {
       return global.__reload ? global.__reload() : null;
     }).then(function () {
@@ -324,13 +349,14 @@
           if (!r.ok) throw new Error('http');
           return r.blob();
         }).then(function (b) {
+          var mime = b.type && /^image\//.test(b.type) ? b.type : 'image/jpeg';
           return new Promise(function (res, rej) {
             var fr = new FileReader();
             fr.onload = function () { res(String(fr.result).split(',')[1]); };
             fr.onerror = rej;
             fr.readAsDataURL(b);
           }).then(function (b64) {
-            return AI.callGeminiVision(b64, want);
+            return AI.callGeminiVision(b64, want, mime);
           });
         }).then(function (tags) {
           if (tags) {
