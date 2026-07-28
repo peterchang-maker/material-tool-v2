@@ -241,7 +241,9 @@
     var rows = filtered();
     if (!S.materials.length) {
       renderEmpty();
-      if (global.Dims) Dims.render({ rows: [], byKey: {}, materials: [], market: S.market, dimensions: S.dimensions });
+      var emptyCtx = { rows: [], byKey: {}, materials: [], market: S.market, dimensions: S.dimensions };
+      if (global.Dims) Dims.render(emptyCtx);
+      if (global.AiOps) AiOps.render(emptyCtx);
       return;
     }
     syncExtraDims();
@@ -249,6 +251,7 @@
     var ctx = { rows: rows, byKey: S.byKey, materials: S.materials, market: S.market, dimensions: S.dimensions };
     if (global.Gallery) Gallery.render(ctx);
     if (global.Dims) Dims.render(ctx);
+    if (global.AiOps) AiOps.render(ctx);
   }
 
   function renderKPI(rows) {
@@ -601,7 +604,7 @@
   }
 
   /* ================= AI 補標 ================= */
-  $('btn-tag').addEventListener('click', function () {
+  function startTagging() {
     if (!AI.getKey()) {
       var k = prompt('請輸入 Gemini API Key（只存在這台電腦，不會上傳雲端）');
       if (!k) return;
@@ -631,7 +634,10 @@
       show($('tag-progress'), false); $('btn-tag').disabled = false;
       banner('標記失敗：' + e.message, 'error');
     });
-  });
+  }
+
+  $('btn-tag').addEventListener('click', startTagging);
+  if ($('btn-tag2')) $('btn-tag2').addEventListener('click', startTagging);
 
   $('btn-tag-abort').addEventListener('click', function () {
     if (S.tagCtl) { S.tagCtl.abort(); $('tag-progress-text').textContent = '停止中，等這批跑完…'; }

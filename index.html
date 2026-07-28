@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>素材成效分析 v2</title>
-<link rel="stylesheet" href="style.css?v=6">
+<link rel="stylesheet" href="style.css?v=7">
 </head>
 <body>
 
@@ -173,15 +173,41 @@
     </div>
 
     <div class="tabpage" data-page="ai" hidden>
-      <section class="panel todo">
-        <h2>還沒搬過來</h2>
-        <p class="muted">補打標籤的按鈕目前在「大盤總覽」分頁。以下是舊版有、這裡還沒有的：</p>
-        <ul>
-          <li>Gemini API 用量與成本統計</li>
-          <li>AI 提議維度、AI 解讀差異</li>
-          <li>AI 撰寫週報文字、洞察摘要</li>
-          <li>沒有 API Key 時的手動 Prompt 流程</li>
-        </ul>
+      <section class="panel">
+        <div class="panel-head"><h2>金鑰與用量</h2></div>
+        <div id="api-key-bar" class="keybar"></div>
+        <div id="api-usage"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2>素材標記</h2>
+          <button class="ghost" id="btn-tag2">補打 AI 標籤</button>
+        </div>
+        <div id="ai-tagline" class="xmeta"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2>AI 提議維度</h2>
+          <button class="ghost" id="btn-dim-suggest">產生建議</button>
+        </div>
+        <div class="xmeta">拿 CTR 最高與最低兩群素材對照著問，找出現有維度沒涵蓋、但可能解釋差異的新維度。</div>
+        <div id="out-dim"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2>AI 解讀差異</h2>
+          <button class="ghost" id="btn-gap">產生解讀</button>
+        </div>
+        <div class="xmeta">比對我方與市場的特徵分佈，只挑落差 20 個百分點以上的項目請 AI 解讀。</div>
+        <div id="out-gap"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2>AI 撰寫週報</h2>
+          <button class="ghost" id="btn-report">產生週報文字</button>
+        </div>
+        <div class="xmeta">依目前的篩選期間與維度彙總產生，會遵守「沒有數字支撐的形容詞不准用」。</div>
+        <div id="out-report"></div>
       </section>
     </div>
 
@@ -214,13 +240,14 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-<script src="cloud.js?v=6"></script>
-<script src="data.js?v=6"></script>
-<script src="ai.js?v=6"></script>
-<script src="images.js?v=6"></script>
-<script src="gallery.js?v=6"></script>
-<script src="dims.js?v=6"></script>
-<script src="tabs.js?v=6"></script>
-<script src="ui.js?v=6"></script>
+<script src="cloud.js?v=7"></script>
+<script src="data.js?v=7"></script>
+<script src="ai.js?v=7"></script>
+<script src="images.js?v=7"></script>
+<script src="gallery.js?v=7"></script>
+<script src="dims.js?v=7"></script>
+<script src="aiops.js?v=7"></script>
+<script src="tabs.js?v=7"></script>
+<script src="ui.js?v=7"></script>
 </body>
 </html>

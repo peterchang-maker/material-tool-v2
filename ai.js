@@ -4,7 +4,46 @@
 
   var TAG_VERSION = 1;                       // 維度改了就把這個加一，舊素材會自動被算成「待補標」
   var KEY_STORE = 'mt2_gemini_key';          // 只存本機，不上雲
-  var MODEL = 'gemini-2.0-flash';
+  var MODEL_KEY = 'mt2_gemini_model';
+  var USAGE_KEY = 'mt2_api_usage';
+  var DEFAULT_MODEL = 'gemini-2.5-flash';
+
+  // USD / 1M tokens。找不到對應型號時用 flash 價當保守估計。
+  var PRICING = {
+    'gemini-2.5-flash': { in: 0.30, out: 2.50 },
+    'gemini-2.5-pro':   { in: 1.25, out: 10.0 },
+    'gemini-2.0-flash': { in: 0.10, out: 0.40 },
+    _default:           { in: 0.30, out: 2.50 }
+  };
+
+  function getModel() { return (localStorage.getItem(MODEL_KEY) || '').trim() || DEFAULT_MODEL; }
+  function setModel(m) { localStorage.setItem(MODEL_KEY, (m || '').trim()); }
+
+  function monthKey() {
+    var d = new Date();
+    return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2);
+  }
+
+  function readUsage() {
+    try { return JSON.parse(localStorage.getItem(USAGE_KEY)) || {}; } catch (e) { return {}; }
+  }
+
+  function recordUsage(inTok, outTok) {
+    var all = readUsage(), k = monthKey();
+    var m = all[k] || { calls: 0, inTok: 0, outTok: 0 };
+    m.calls += 1; m.inTok += (inTok || 0); m.outTok += (outTok || 0);
+    all[k] = m;
+    var keys = Object.keys(all).sort();
+    while (keys.length > 6) { delete all[keys.shift()]; }   // 只留最近六個月
+    try { localStorage.setItem(USAGE_KEY, JSON.stringify(all)); } catch (e) {}
+    if (global.AiOps && AiOps.renderUsage) AiOps.renderUsage();
+  }
+
+  function usageCost(m) {
+    if (!m) return 0;
+    var p = PRICING[getModel()] || PRICING._default;
+    return m.inTok / 1e6 * p.in + m.outTok / 1e6 * p.out;
+  }
   var COST_PER_MATERIAL_TWD = 0.12;          // 粗估，實際以帳單為準
 
   var TAG_SCHEMA = {
@@ -63,7 +102,7 @@
     var key = getKey();
     if (!key) return Promise.reject(new Error('尚未設定 Gemini API Key'));
     var url = 'https://generativelanguage.googleapis.com/v1beta/models/' +
-              MODEL + ':generateContent?key=' + encodeURIComponent(key);
+              getModel() + ':generateContent?key=' + encodeURIComponent(key);
     return fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -75,6 +114,8 @@
       if (!r.ok) return r.text().then(function (t) { throw new Error('Gemini 回應 ' + r.status + '：' + t.slice(0, 200)); });
       return r.json();
     }).then(function (j) {
+      var u = j.usageMetadata || {};
+      recordUsage(u.promptTokenCount || 0, u.candidatesTokenCount || 0);
       var parts = (((j.candidates || [])[0] || {}).content || {}).parts || [];
       return parts.map(function (p) { return p.text || ''; }).join('');
     });
@@ -129,6 +170,8 @@
   global.AI = {
     TAG_VERSION: TAG_VERSION, TAG_SCHEMA: TAG_SCHEMA, ALL_DIMS: ALL_DIMS,
     getKey: getKey, setKey: setKey, setExtraDims: setExtraDims, expectedDims: expectedDims,
+    getModel: getModel, setModel: setModel, readUsage: readUsage, usageCost: usageCost,
+    monthKey: monthKey, PRICING: PRICING,
     pending: pending, estimateCost: estimateCost,
     buildPrompt: buildPrompt, normalizeAiText: normalizeAiText,
     callGemini: callGemini, tagBatch: tagBatch
