@@ -92,6 +92,25 @@
     return isNaN(p) ? null : p.toISOString().slice(0, 10);
   }
 
+  // 成效表常常夾雜「依格式加總」的小計列（圖片／影片／圖影組合這種）。
+  // 那些列的數字是其他列的總和，當成素材灌進去會讓所有統計重複計算一次，
+  // 而且畫面上看起來完全正常——只會覺得某幾個素材的曝光特別高。
+  var SUMMARY_WORDS = /^(合計|總計|小計|總和|加總|total|sum|subtotal|全部|整體|其他|平均)$/i;
+
+  function dropSummaryRows(rows) {
+    var hasStructured = rows.some(function (r) { return r.material_name.indexOf('_') > 0; });
+    var keep = [], skipped = [];
+    rows.forEach(function (r) {
+      var n = r.material_name;
+      var isSummary = SUMMARY_WORDS.test(n) ||
+        // 檔案裡既然有五段式命名，那些只有單一詞的列幾乎都是小計
+        (hasStructured && n.indexOf('_') < 0);
+      if (isSummary) { if (skipped.indexOf(n) < 0) skipped.push(n); }
+      else keep.push(r);
+    });
+    return { rows: keep, skipped: skipped };
+  }
+
   // 同一天、同一素材、同一渠道在檔案裡出現多列（跑在多個廣告組時很常見）
   // 必須先加總成一列，否則寫入資料庫時整批會失敗。
   function aggregateDaily(rows) {
@@ -140,6 +159,7 @@
       if (headerRow < 0) return;
       out.sheets.push(sn);
 
+      var pending = [];
       for (var i = headerRow + 1; i < grid.length; i++) {
         var row = grid[i];
         var name = String(row[cols.name] || '').trim();
@@ -149,7 +169,7 @@
         var channel = cols.channel >= 0 ? String(row[cols.channel] || '').trim() : '';
         if (!channel) channel = fallbackChannel || sn;
 
-        out.rows.push({
+        pending.push({
           material_name: name,
           material_key: materialKey(name),
           stat_date: date,
@@ -160,6 +180,10 @@
           conversions: cols.conversions >= 0 ? toInt(row[cols.conversions]) : 0
         });
       }
+      var kept = dropSummaryRows(pending);
+      out.rows = out.rows.concat(kept.rows);
+      out.skipped += kept.skipped.length;
+      out.skippedNames = (out.skippedNames || []).concat(kept.skipped);
     });
     var before = out.rows.length;
     out.rows = aggregateDaily(out.rows);
@@ -286,6 +310,7 @@
     CHANNELS: CHANNELS,
     normalizeName: normalizeName, materialKey: materialKey, parseName: parseName,
     parseWorkbook: parseWorkbook, toDate: toDate, aggregateDaily: aggregateDaily,
+    dropSummaryRows: dropSummaryRows,
     metrics: metrics, groupBy: groupBy, trendFor: trendFor, fmt: fmt,
     parseMarketWorkbook: parseMarketWorkbook, mergeMarket: mergeMarket
   };

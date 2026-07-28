@@ -156,7 +156,10 @@
     return S.daily.filter(function (d) {
       if (f.range !== '0' && d.stat_date < cutoff) return false;
       if (f.channel && d.channel !== f.channel) return false;
-      var m = S.byKey[d.material_key] || {};
+      // 找不到對應素材的每日資料一律排除。軟刪除彙總列之後，
+      // 它們的數字才會真的從所有統計裡消失。
+      var m = S.byKey[d.material_key];
+      if (!m) return false;
       if (f.angle && m.angle !== f.angle) return false;
       if (f.sp && m.selling_point !== f.sp) return false;
       if (f.q && String(m.material_name || '').toLowerCase().indexOf(f.q.toLowerCase()) < 0) return false;
@@ -455,7 +458,11 @@
         banner(null);
         document.body.classList.remove('readonly');
         alert('匯入完成：' + Object.keys(matMap).length + ' 個素材、' + daily.length + ' 筆每日資料。' +
-              (parsed.merged ? '\n（有 ' + parsed.merged + ' 列是同一天同一素材的重複紀錄，已自動加總）' : ''));
+              (parsed.merged ? '\n（有 ' + parsed.merged + ' 列是同一天同一素材的重複紀錄，已自動加總）' : '') +
+              ((parsed.skippedNames || []).length
+                ? '\n\n已略過 ' + parsed.skippedNames.length + ' 個彙總列：' +
+                  parsed.skippedNames.slice(0, 6).join('、') +
+                  '\n（這些是小計，算進去會重複計算）' : ''));
         return { ok: true };
       })
       .catch(function (e) {
@@ -567,6 +574,38 @@
     box.innerHTML = html + box.innerHTML;
     if (global.Tabs) Tabs.go('wall');
   }
+
+  /* ================= 清理彙總列 ================= */
+  $('btn-cleanup').addEventListener('click', function () {
+    var names = S.materials.map(function (m) { return m.material_name || ''; });
+    var hasStructured = names.some(function (n) { return n.indexOf('_') > 0; });
+    var suspects = S.materials.filter(function (m) {
+      var n = m.material_name || '';
+      return /^(合計|總計|小計|總和|加總|total|sum|subtotal|全部|整體|其他|平均)$/i.test(n) ||
+             (hasStructured && n.indexOf('_') < 0);
+    });
+
+    if (!suspects.length) { alert('沒有找到疑似彙總列的素材。'); return; }
+
+    if (!confirm('找到 ' + suspects.length + ' 筆疑似彙總列：\n\n' +
+        suspects.slice(0, 15).map(function (m) { return '· ' + m.material_name; }).join('\n') +
+        (suspects.length > 15 ? '\n…另有 ' + (suspects.length - 15) + ' 筆' : '') +
+        '\n\n這些通常是 Excel 裡依格式加總的小計列，留著會讓所有統計重複計算。\n' +
+        '確定要移除嗎？（只是標記刪除，資料仍在資料庫裡，隨時可以還原）')) return;
+
+    banner('清理中…', '');
+    var chain = Promise.resolve();
+    suspects.forEach(function (m) {
+      chain = chain.then(function () { return Cloud.softDelete('materials', m.id); });
+    });
+    chain.then(function () { return Cloud.loadAll(sinceDate()); })
+      .then(function (fresh) {
+        apply(fresh, new Date().toISOString());
+        banner(null);
+        alert('已移除 ' + suspects.length + ' 筆。所有統計數字現在應該會下降——那是原本被重複計算的部分。');
+      })
+      .catch(function (e) { banner('清理失敗：' + e.message, 'error'); });
+  });
 
   /* ================= 從舊版搬資料 ================= */
   $('btn-migrate').addEventListener('click', function () {
