@@ -233,3 +233,17 @@ body.readonly button:not(.link):not(#btn-signout){
      font-size:12px;white-space:pre-wrap;word-break:break-all;max-height:300px;overflow:auto}
 .sug{border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;margin-bottom:8px}
 .sug-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:4px}
+
+/* ---- 市場競品 ---- */
+.tg-list{display:flex;flex-direction:column;gap:6px}
+.tg{display:flex;align-items:center;gap:10px;padding:7px 10px;border:1px solid var(--line);
+    border-radius:var(--r);font-size:13px;cursor:pointer}
+.tg input{width:auto}
+.tg-name{font-weight:500;min-width:120px}
+.tg .muted{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dc-row{display:grid;grid-template-columns:1fr 110px 76px;gap:8px;align-items:center;margin:6px 0;font-size:12px}
+.dc-bars{display:flex;flex-direction:column;gap:2px}
+.dc-bar{height:7px;border-radius:2px;min-width:2px}
+.dc-bar.mkt{background:#b4b2a9}
+.dc-bar.own{background:var(--accent)}
+@media (max-width:640px){.tg{flex-wrap:wrap}.tg .muted{flex-basis:100%}}

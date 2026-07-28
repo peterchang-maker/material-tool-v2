@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>素材成效分析 v2</title>
-<link rel="stylesheet" href="style.css?v=8">
+<link rel="stylesheet" href="style.css?v=9">
 </head>
 <body>
 
@@ -42,6 +42,7 @@
   <input type="file" id="json-input" accept=".json" hidden>
   <input type="file" id="img-input" accept=".xlsx,.xls" hidden>
   <input type="file" id="market-input" accept=".xlsx,.xls" hidden>
+  <input type="file" id="mk-json-input" accept=".json" hidden>
 
   <nav class="tabs" id="tabs">
     <button class="tab active" data-tab="overview">大盤總覽</button>
@@ -153,15 +154,30 @@
     </div>
 
     <div class="tabpage" data-page="market" hidden>
-      <section class="panel todo">
-        <h2>還沒搬過來</h2>
-        <p class="muted">競品素材目前可在「素材牆」分頁檢視。以下是舊版有、這裡還沒有的：</p>
-        <ul>
-          <li>Apify 自動抓取市場素材</li>
-          <li>存活天數加權切分</li>
-          <li>我方 × 市場 特徵分佈對比</li>
-          <li>Meta 廣告庫書籤</li>
-        </ul>
+      <section class="panel">
+        <div class="panel-head"><h2>蒐集競品素材</h2>
+          <span id="mk-summary" class="muted"></span>
+        </div>
+        <div id="collect"></div>
+        <div id="mk-bookmarklet"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2>競品素材標籤</h2>
+          <button class="ghost" id="mk-tag">看圖標記競品素材</button>
+        </div>
+        <div class="xmeta">競品素材的名稱是機器編的，沒有語意，所以要把圖片送給 AI 判讀。
+          一次最多處理 60 筆，避免一次燒掉太多額度。</div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2>存活天數切分</h2></div>
+        <div id="survival"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2>我方 × 市場 分佈對比</h2></div>
+        <div id="dist-compare"></div>
       </section>
     </div>
 
@@ -240,14 +256,15 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-<script src="cloud.js?v=8"></script>
-<script src="data.js?v=8"></script>
-<script src="ai.js?v=8"></script>
-<script src="images.js?v=8"></script>
-<script src="gallery.js?v=8"></script>
-<script src="dims.js?v=8"></script>
-<script src="aiops.js?v=8"></script>
-<script src="tabs.js?v=8"></script>
-<script src="ui.js?v=8"></script>
+<script src="cloud.js?v=9"></script>
+<script src="data.js?v=9"></script>
+<script src="ai.js?v=9"></script>
+<script src="images.js?v=9"></script>
+<script src="gallery.js?v=9"></script>
+<script src="dims.js?v=9"></script>
+<script src="aiops.js?v=9"></script>
+<script src="market.js?v=9"></script>
+<script src="tabs.js?v=9"></script>
+<script src="ui.js?v=9"></script>
 </body>
 </html>

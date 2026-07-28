@@ -244,6 +244,7 @@
       var emptyCtx = { rows: [], byKey: {}, materials: [], market: S.market, dimensions: S.dimensions };
       if (global.Dims) Dims.render(emptyCtx);
       if (global.AiOps) AiOps.render(emptyCtx);
+      if (global.Market) Market.render(emptyCtx);
       return;
     }
     syncExtraDims();
@@ -252,6 +253,7 @@
     if (global.Gallery) Gallery.render(ctx);
     if (global.Dims) Dims.render(ctx);
     if (global.AiOps) AiOps.render(ctx);
+    if (global.Market) Market.render(ctx);
   }
 
   function renderKPI(rows) {

@@ -131,6 +131,41 @@
     });
   }
 
+  /* 看圖標籤：競品素材的名稱沒有語意，只能靠圖片判斷 */
+  function callGeminiVision(base64, dims) {
+    var key = getKey();
+    if (!key) return Promise.reject(new Error('尚未設定 Gemini API Key'));
+    var prompt = '請看這張廣告素材圖，就下列 ' + dims.length + ' 個維度給出判斷。\n' +
+      dims.map(function (d, i) { return (i + 1) + '. ' + d; }).join('\n') + '\n\n' +
+      '規則：只輸出一個 JSON 物件，鍵是維度名稱、值是判斷結果；' +
+      '不要任何說明文字或 markdown 標記；看不出來的填「不確定」，不要臆測。';
+    var url = 'https://generativelanguage.googleapis.com/v1beta/models/' +
+              getModel() + ':generateContent?key=' + encodeURIComponent(key);
+    return fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [
+          { inline_data: { mime_type: 'image/jpeg', data: base64 } },
+          { text: prompt }
+        ] }],
+        generationConfig: { temperature: 0.2, maxOutputTokens: 2048 }
+      })
+    }).then(function (r) {
+      if (!r.ok) return r.text().then(function (t) { throw new Error('Gemini ' + r.status + '：' + t.slice(0, 150)); });
+      return r.json();
+    }).then(function (j) {
+      var u = j.usageMetadata || {};
+      recordUsage(u.promptTokenCount || 0, u.candidatesTokenCount || 0);
+      var parts = (((j.candidates || [])[0] || {}).content || {}).parts || [];
+      var text = parts.map(function (p) { return p.text || ''; }).join('');
+      var t = String(text).trim().replace(/^```(?:json)?/i, '').replace(/```$/, '').trim();
+      var a = t.indexOf('{'), b = t.lastIndexOf('}');
+      if (a >= 0 && b > a) t = t.slice(a, b + 1);
+      try { return JSON.parse(t); } catch (e) { return null; }
+    });
+  }
+
   /* 批次補標：一次 20 筆，回報進度，可中止 */
   function tagBatch(materials, opts) {
     opts = opts || {};
@@ -184,6 +219,6 @@
     monthKey: monthKey, PRICING: PRICING,
     pending: pending, estimateCost: estimateCost, costText: costText,
     buildPrompt: buildPrompt, normalizeAiText: normalizeAiText,
-    callGemini: callGemini, tagBatch: tagBatch
+    callGemini: callGemini, callGeminiVision: callGeminiVision, tagBatch: tagBatch
   };
 })(window);
