@@ -44,22 +44,24 @@
     impressions: ['曝光', '曝光數', 'impressions', 'imp'],
     clicks: ['點擊', '點擊數', 'clicks', 'click'],
     spend: ['花費', '費用', 'spend', 'cost', '金額'],
-    conversions: ['預約', '預約數', '轉換', '轉換數', 'conversions', 'cv', 'install']
+    conversions: ['預約', '預約數', '轉換', '轉換數', 'conversions', 'conversion', 'results', '安裝', 'install', 'installs']
   };
 
   // 「曝光佔比」不是「曝光」、「點擊率」不是「點擊」。
-  // 先找完全相符的欄位；找不到才退回開頭比對，並排除比率類欄位。
-  var RATIO_WORDS = /率|佔比|占比|比例|百分|%|rate|ratio|percent|avg|平均/i;
+  // CTR / CVR / CPC 這類縮寫是算出來的指標，絕對不能被當成原始數據欄。
+  var METRIC_ABBR = /^(ctr|cvr|cpc|cpm|cpa|cpi|cpl|roas|roi|freq|frequency|reach率)$/i;
+  var RATIO_WORDS = /率|佔比|占比|比例|百分|%|rate|ratio|percent|avg|平均|per\s|每次|單次/i;
 
   function findCol(headers, field) {
     var alias = ALIASES[field].map(function (a) { return a.toLowerCase(); });
     var norm = headers.map(function (h) { return String(h || '').trim().toLowerCase(); });
 
     for (var i = 0; i < norm.length; i++) {
+      if (METRIC_ABBR.test(norm[i])) continue;
       if (alias.indexOf(norm[i]) >= 0) return i;
     }
     for (var k = 0; k < norm.length; k++) {
-      if (!norm[k] || RATIO_WORDS.test(norm[k])) continue;
+      if (!norm[k] || METRIC_ABBR.test(norm[k]) || RATIO_WORDS.test(norm[k])) continue;
       for (var j = 0; j < alias.length; j++) {
         if (norm[k].indexOf(alias[j]) === 0) return k;
       }
@@ -72,6 +74,8 @@
     var n = parseFloat(String(v).replace(/[,$%\s]/g, ''));
     return isNaN(n) ? 0 : n;
   }
+
+  function toInt(v) { return Math.round(toNumber(v)); }
 
   // Excel 的日期常常是序號（45000 這種），不是字串。這坑踩過了。
   function toDate(v) {
@@ -149,10 +153,10 @@
           material_key: materialKey(name),
           stat_date: date,
           channel: channel,
-          impressions: cols.impressions >= 0 ? toNumber(row[cols.impressions]) : 0,
-          clicks: cols.clicks >= 0 ? toNumber(row[cols.clicks]) : 0,
+          impressions: cols.impressions >= 0 ? toInt(row[cols.impressions]) : 0,
+          clicks: cols.clicks >= 0 ? toInt(row[cols.clicks]) : 0,
           spend: cols.spend >= 0 ? toNumber(row[cols.spend]) : 0,
-          conversions: cols.conversions >= 0 ? toNumber(row[cols.conversions]) : 0
+          conversions: cols.conversions >= 0 ? toInt(row[cols.conversions]) : 0
         });
       }
     });
