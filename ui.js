@@ -9,20 +9,25 @@
     sortField: 'spend', sortDir: -1, pendingUpdate: null, tagCtl: null
   };
 
+  function show(el, on, mode) {
+    el.hidden = !on;
+    el.style.display = on ? (mode || 'block') : 'none';
+  }
+
   /* ================= 橫幅：只在需要你做事時才說話 ================= */
   function banner(msg, kind) {
     var b = $('banner');
-    if (!msg) { b.hidden = true; return; }
+    if (!msg) { show(b, false); return; }
     b.className = 'banner ' + (kind || '');
     b.textContent = msg;
-    b.hidden = false;
+    show(b, true);
   }
 
   /* ================= 登入 ================= */
   function showLogin(err) {
-    $('login').hidden = false; $('app').hidden = true;
+    show($('login'), true, 'flex'); show($('app'), false);
     var e = $('login-err');
-    if (err) { e.textContent = err; e.hidden = false; } else { e.hidden = true; }
+    if (err) { e.textContent = err; show(e, true); } else { show(e, false); }
   }
 
   $('login-btn').addEventListener('click', function () {
@@ -54,7 +59,7 @@
 
   /* ================= 啟動：快取先畫，雲端後補 ================= */
   function start() {
-    $('login').hidden = true; $('app').hidden = false;
+    show($('login'), false); show($('app'), true);
 
     var cached = Cloud.readCache();
     if (cached) { apply(cached.data, cached.at); }
@@ -65,7 +70,7 @@
     var since = sinceDate();
     Cloud.loadAll(since).then(function (fresh) {
       if (!cached) { apply(fresh, new Date().toISOString()); }
-      else if (changed(cached.data, fresh)) { S.pendingUpdate = fresh; $('update-prompt').hidden = false; }
+      else if (changed(cached.data, fresh)) { S.pendingUpdate = fresh; show($('update-prompt'), true, 'flex'); }
       else { S.cacheAt = new Date().toISOString(); renderFreshness(); }
       return Cloud.loadGaps();
     }).then(renderGaps)
@@ -88,7 +93,7 @@
     apply(S.pendingUpdate, new Date().toISOString());
     Cloud.writeCache(S.pendingUpdate);
     S.pendingUpdate = null;
-    $('update-prompt').hidden = true;
+    show($('update-prompt'), false);
   });
 
   function offlineBanner() {
@@ -130,17 +135,17 @@
   var DISMISS = Cloud.PREFIX + 'gaps_dismissed';
   function renderGaps(gaps) {
     var box = $('gaps');
-    if (localStorage.getItem(DISMISS) === new Date().toISOString().slice(0, 10)) { box.hidden = true; return; }
-    if (!gaps || !gaps.length) { box.hidden = true; return; }
+    if (localStorage.getItem(DISMISS) === new Date().toISOString().slice(0, 10)) { show(box, false); return; }
+    if (!gaps || !gaps.length) { show(box, false); return; }
     var by = {};
     gaps.forEach(function (g) { (by[g.channel] = by[g.channel] || []).push(g.stat_date.slice(5)); });
     var txt = Object.keys(by).map(function (c) { return c + ' 缺 ' + by[c].slice(0, 5).join('、'); }).join('；');
     box.innerHTML = '';
     var span = document.createElement('span'); span.textContent = '最近 14 天有資料沒進來：' + txt;
     var btn = document.createElement('button'); btn.className = 'link'; btn.textContent = '今天不再提醒';
-    btn.onclick = function () { localStorage.setItem(DISMISS, new Date().toISOString().slice(0, 10)); box.hidden = true; };
+    btn.onclick = function () { localStorage.setItem(DISMISS, new Date().toISOString().slice(0, 10)); show(box, false); };
     box.appendChild(span); box.appendChild(btn);
-    box.hidden = false;
+    show(box, true, 'flex');
   }
 
   /* ================= 篩選 ================= */
@@ -197,7 +202,7 @@
       };
       chip.appendChild(x); wrap.appendChild(chip);
     });
-    $('btn-clear-filters').hidden = !any;
+    show($('btn-clear-filters'), any, 'inline-block');
   }
 
   $('btn-clear-filters').addEventListener('click', function () {
@@ -494,7 +499,7 @@
     if (!todo.length) return;
     if (!confirm('要補標 ' + todo.length + ' 筆素材，預估花費 $' + AI.estimateCost(todo.length).toFixed(0) + '。\n\n中途可以按「停止」，已標好的會保留。要開始嗎？')) return;
 
-    $('tag-progress').hidden = false;
+    show($('tag-progress'), true, 'flex');
     $('btn-tag').disabled = true;
     S.tagCtl = AI.tagBatch(S.materials, {
       onProgress: function (done, total) {
@@ -502,7 +507,7 @@
       }
     });
     S.tagCtl.promise.then(function (out) {
-      $('tag-progress').hidden = true;
+      show($('tag-progress'), false);
       if (!out.results.length) { alert('沒有成功標記任何素材。'); $('btn-tag').disabled = false; return; }
       return Cloud.saveMaterials(out.results)
         .then(function () { return Cloud.loadAll(sinceDate()); })
@@ -511,7 +516,7 @@
           alert('完成 ' + out.results.length + ' 筆' + (out.aborted ? '（已中止，其餘保留未標記）' : '') + '。');
         });
     }).catch(function (e) {
-      $('tag-progress').hidden = true; $('btn-tag').disabled = false;
+      show($('tag-progress'), false); $('btn-tag').disabled = false;
       banner('標記失敗：' + e.message, 'error');
     });
   });
