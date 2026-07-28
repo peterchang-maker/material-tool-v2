@@ -95,9 +95,12 @@
       var f = extractAd(it);
       if (!f.image) { noImage++; return; }
       var comp = String(f.advertiser || '未命名').slice(0, 60);
-      // 同一支廣告第二次抓回來時，CDN 網址常會多出尺寸參數。
-      // 編號若混進網址，同一支廣告會被當成新素材，存活天數就永遠算不出來。
-      var id = 'ap' + djb2(f.id ? 'id:' + f.id : 'img:' + String(f.image).split('?')[0]);
+      // 兩個要求要同時滿足：
+      // 1. CDN 網址常會多出尺寸參數，編號不能因此改變，否則存活天數永遠算不出來
+      // 2. 輪播廣告的多張圖共用同一個廣告 ID，不能被壓成同一個素材
+      // 所以用「廣告 ID ＋ 去掉查詢字串的圖片路徑」，兩者都穩定也都有區辨力。
+      var imgPath = String(f.image).split('?')[0];
+      var id = 'ap' + djb2((f.id ? 'id:' + f.id + '|' : '') + 'img:' + imgPath);
       rows.push({
         competitor: comp,
         material_key: id,
