@@ -270,3 +270,10 @@ body.readonly button:not(.link):not(#btn-signout){
 .cs-note{margin-top:12px;font-size:13px;color:#0f766e}
 .cs-foot{margin-top:16px;font-size:11px;color:#a39d8c;border-top:1px solid #eeece6;padding-top:8px}
 #card-preview{margin-top:14px;overflow-x:auto}
+
+details.adv{margin-top:14px;border:1px solid var(--line);border-radius:var(--r);padding:10px 12px}
+details.adv summary{cursor:pointer;font-size:13px;color:var(--ink-2)}
+details.adv textarea{width:100%;margin-top:10px;font:12px/1.6 monospace;padding:8px;
+                     border:1px solid var(--line);border-radius:var(--r);background:#faf9f6;resize:vertical}
+.steps{margin:8px 0 12px;padding-left:22px;font-size:14px;line-height:1.9}
+.steps li{margin:2px 0}

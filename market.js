@@ -7,8 +7,28 @@
   var DEFAULT_ACTOR = 'silva95gustavo~google-ads-scraper';
   var K = {
     token: 'mt2_apify_token', actor: 'mt2_apify_actor',
-    params: 'mt2_apify_params', targets: 'mt2_apify_targets', lastRun: 'mt2_apify_lastrun'
+    params: 'mt2_apify_params', targets: 'mt2_apify_targets', lastRun: 'mt2_apify_lastrun',
+    platform: 'mt2_mk_platform', metaActor: 'mt2_meta_actor', metaTargets: 'mt2_meta_targets'
   };
+  // Meta 廣告檔案庫沒有免費的公開 API，市面上的 actor 不只一支、輸入格式也不一樣，
+  // 所以預設值只是起點，不對的話在畫面上直接改。
+  var META_DEFAULT_ACTOR = 'curious_coder~facebook-ads-library-scraper';
+
+  function platform() { return localStorage.getItem(K.platform) || 'google'; }
+  function metaActor() { return (localStorage.getItem(K.metaActor) || '').trim() || META_DEFAULT_ACTOR; }
+  function metaTargets() { var t = lsGet(K.metaTargets, null); return Array.isArray(t) ? t : []; }
+
+  // Meta 廣告檔案庫的搜尋網址
+  function metaUrl(t) {
+    var p = params();
+    var c = encodeURIComponent(p.region || 'TW');
+    if (t.type === 'page') {
+      return 'https://www.facebook.com/ads/library/?active_status=all&ad_type=all&country=' + c +
+             '&view_all_page_id=' + encodeURIComponent(String(t.value).trim()) + '&search_type=page';
+    }
+    return 'https://www.facebook.com/ads/library/?active_status=all&ad_type=all&country=' + c +
+           '&q=' + encodeURIComponent(String(t.value).trim()) + '&search_type=keyword_unordered';
+  }
   var ctx = { materials: [], market: [], dimensions: [] };
 
   function esc(s) {
@@ -56,9 +76,9 @@
         if (!out.image && looksImg && !badKey && !/adstransparency\.google\.com/i.test(v)) out.image = v;
       }
       if (!out.advertiser &&
-          /(^|\.)(advertiser|brand|company|domain)(name|title|\.name|\.title)?$/i.test(k) &&
+          /(^|\.)(advertiser|brand|company|domain|page|pagename)(name|title|\.name|\.title)?$/i.test(k) &&
           !/id$/i.test(k) && v && !/^https?:/i.test(v) && v.length < 80) out.advertiser = v;
-      if (!out.id && /(^|\.)(creativeid|adid|creative_id|ad_id|id)$/i.test(k) && v) out.id = v;
+      if (!out.id && /(^|\.)(adarchiveid|archiveid|libraryid|creativeid|adid|creative_id|ad_id|id)$/i.test(k) && v) out.id = v;
       if (/first|start|shown|date|since/i.test(k) && v && !/^https?:/i.test(v)) dates.push(v);
     });
     var parsed = dates.map(function (v) { var d = new Date(v); return isNaN(d.getTime()) ? null : d; })
@@ -152,23 +172,46 @@
       });
   }
 
-  function runApify(onStatus) {
-    var on = targets().filter(function (t) { return t.on; });
-    if (!token()) return Promise.reject(new Error('尚未設定 Apify token'));
-    if (!on.length) return Promise.reject(new Error('沒有勾選任何監控對象'));
-
+  function currentInput() {
     var p = params();
-    var input = {
+    var limit = Math.max(1, Math.min(1000, +p.limit || 100));
+    if (platform() === 'meta') {
+      var on = metaTargets().filter(function (t) { return t.on; });
+      return {
+        count: limit,
+        'scrapeAdDetails': true,
+        'scrapePageAds.activeStatus': 'all',
+        urls: on.map(function (t) { return { url: metaUrl(t), method: 'GET' }; })
+      };
+    }
+    var g = targets().filter(function (t) { return t.on; });
+    return {
       ocr: false,
-      resultsLimit: Math.max(1, Math.min(1000, +p.limit || 100)),
+      resultsLimit: limit,
       shouldDownloadAssets: false,
       shouldDownloadPreviews: false,
       skipDetails: false,
-      startUrls: on.map(function (t) { return { url: targetUrl(t) }; })
+      startUrls: g.map(function (t) { return { url: targetUrl(t) }; })
     };
+  }
+
+  function runApify(onStatus) {
+    var isMeta = platform() === 'meta';
+    var on = (isMeta ? metaTargets() : targets()).filter(function (t) { return t.on; });
+    if (!token()) return Promise.reject(new Error('尚未設定 Apify token'));
+    if (!on.length) return Promise.reject(new Error('沒有勾選任何監控對象'));
+
+    var custom = $('mk-input') && $('mk-input').value.trim();
+    var input;
+    if (custom) {
+      try { input = JSON.parse(custom); }
+      catch (e) { return Promise.reject(new Error('自訂輸入不是有效的 JSON')); }
+    } else {
+      input = currentInput();
+    }
 
     onStatus('送出抓取任務…');
-    return apifyReq('acts/' + encodeURIComponent(actor()) + '/runs', {
+    return apifyReq('acts/' + encodeURIComponent(isMeta ? metaActor() : actor()) + '/runs', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(input)
@@ -381,39 +424,53 @@
   /* ============ 設定與蒐集介面 ============ */
   function renderCollect() {
     var box = $('collect'); if (!box) return;
-    var p = params(), list = targets();
+    var p = params(), isMeta = platform() === 'meta';
+    var list = isMeta ? metaTargets() : targets();
 
     box.innerHTML =
       '<div class="keybar">' +
+        '<select id="mk-platform">' +
+          '<option value="google"' + (isMeta ? '' : ' selected') + '>Google 廣告透明中心</option>' +
+          '<option value="meta"' + (isMeta ? ' selected' : '') + '>Meta 廣告檔案庫</option>' +
+        '</select>' +
         '<span class="apibadge ' + (token() ? 'on' : 'off') + '">' +
           (token() ? 'Apify token 已設定' : '未設定 Apify token') + '</span>' +
         '<button class="ghost" id="mk-token">' + (token() ? '更換 token' : '設定 token') + '</button>' +
-        '<input id="mk-actor" value="' + esc(actor()) + '" style="width:260px" title="Apify actor">' +
+        '<input id="mk-actor" value="' + esc(isMeta ? metaActor() : actor()) + '" style="width:280px" title="Apify actor">' +
       '</div>' +
       '<div class="filter-row" style="margin-bottom:12px">' +
         '<label>地區 <input id="mk-region" value="' + esc(p.region) + '" style="width:70px"></label>' +
         '<label>筆數上限 <input id="mk-limit" type="number" value="' + p.limit + '" style="width:90px"></label>' +
-        '<label>近幾天 <input id="mk-days" type="number" value="' + p.days + '" style="width:90px"></label>' +
+        (isMeta ? '' : '<label>近幾天 <input id="mk-days" type="number" value="' + p.days + '" style="width:90px"></label>') +
       '</div>' +
       '<h3 class="g-h">監控對象</h3>' +
       (list.length ? '<div class="tg-list">' + list.map(function (t, i) {
         return '<label class="tg"><input type="checkbox" class="tg-on" data-i="' + i + '"' + (t.on ? ' checked' : '') + '>' +
           '<span class="tg-name">' + esc(t.name || t.value) + '</span>' +
           '<span class="muted">' + esc(t.type) + '：' + esc(t.value) + '</span>' +
+          '<a class="link" href="' + esc(isMeta ? metaUrl(t) : targetUrl(t)) + '" target="_blank" rel="noopener">開啟</a>' +
           '<button class="link tg-del" data-i="' + i + '">刪除</button></label>';
       }).join('') + '</div>' : '<div class="empty">還沒有監控對象。用下面的欄位新增。</div>') +
       '<div class="dim-add" style="margin-top:12px">' +
-        '<select id="tg-type"><option value="domain">網域</option><option value="advertiser">廣告主 ID</option>' +
-        '<option value="url">完整網址</option></select>' +
+        '<select id="tg-type">' +
+          (isMeta
+            ? '<option value="keyword">關鍵字</option><option value="page">粉絲專頁 ID</option>'
+            : '<option value="domain">網域</option><option value="advertiser">廣告主 ID</option><option value="url">完整網址</option>') +
+        '</select>' +
         '<input id="tg-name" placeholder="顯示名稱，例如 天堂W">' +
-        '<input id="tg-value" placeholder="例如 lineagew.com.tw">' +
+        '<input id="tg-value" placeholder="' + (isMeta ? '例如 天堂W 或 105… 粉專 ID' : '例如 lineagew.com.tw') + '">' +
         '<button class="ghost" id="tg-add">新增</button>' +
       '</div>' +
+      '<details class="adv"><summary>進階：自訂送給 actor 的輸入 JSON</summary>' +
+        '<textarea id="mk-input" rows="6" placeholder="留空就用預設。不同 actor 的輸入格式不一樣，' +
+        '照 Apify 頁面上的說明填。"></textarea>' +
+        '<div class="xmeta">目前的預設輸入：<code>' + esc(JSON.stringify(currentInput())) + '</code></div>' +
+      '</details>' +
       '<div class="manual-actions" style="margin-top:16px">' +
         '<button class="ghost" id="mk-run">執行新一輪抓取</button>' +
         '<button class="ghost" id="mk-last">讀取最近一次執行</button>' +
         '<button class="ghost" id="mk-json">上傳擷取檔 JSON</button>' +
-        '<button class="ghost" id="mk-book">Meta 廣告庫書籤</button>' +
+        (isMeta ? '<button class="ghost" id="mk-book">不用 Apify：Meta 頁面書籤</button>' : '') +
       '</div>' +
       '<div id="mk-status" class="xmeta" style="margin-top:10px"></div>';
 
@@ -423,13 +480,21 @@
   function status(msg) { if ($('mk-status')) $('mk-status').textContent = msg || ''; }
 
   function bindCollect() {
+    $('mk-platform').onchange = function () {
+      localStorage.setItem(K.platform, this.value);
+      if ($('mk-bookmarklet')) $('mk-bookmarklet').innerHTML = '';
+      renderCollect();
+    };
     $('mk-token').onclick = function () {
       var t = prompt('貼上 Apify API token（只存在這台電腦）', '');
       if (t == null) return;
       localStorage.setItem(K.token, t.trim()); renderCollect();
     };
-    $('mk-actor').onchange = function () { localStorage.setItem(K.actor, this.value.trim()); };
+    $('mk-actor').onchange = function () {
+      localStorage.setItem(platform() === 'meta' ? K.metaActor : K.actor, this.value.trim());
+    };
     ['region', 'limit', 'days'].forEach(function (f) {
+      if (!$('mk-' + f)) return;
       $('mk-' + f).onchange = function () {
         var p = params(); p[f] = f === 'region' ? this.value.trim() : parseInt(this.value, 10) || 0;
         lsSet(K.params, p);
@@ -438,18 +503,21 @@
     $('tg-add').onclick = function () {
       var v = $('tg-value').value.trim();
       if (!v) { alert('請填監控對象的值。'); return; }
-      var list = targets();
+      var isMeta = platform() === 'meta';
+      var list = isMeta ? metaTargets() : targets();
       list.push({ name: $('tg-name').value.trim() || v, type: $('tg-type').value, value: v, on: true });
-      lsSet(K.targets, list); renderCollect();
+      lsSet(isMeta ? K.metaTargets : K.targets, list); renderCollect();
     };
+    function store() { return platform() === 'meta' ? K.metaTargets : K.targets; }
+    function cur() { return platform() === 'meta' ? metaTargets() : targets(); }
     Array.prototype.forEach.call(document.querySelectorAll('.tg-on'), function (cb) {
       cb.onchange = function () {
-        var list = targets(); list[+cb.getAttribute('data-i')].on = cb.checked; lsSet(K.targets, list);
+        var list = cur(); list[+cb.getAttribute('data-i')].on = cb.checked; lsSet(store(), list);
       };
     });
     Array.prototype.forEach.call(document.querySelectorAll('.tg-del'), function (b) {
       b.onclick = function () {
-        var list = targets(); list.splice(+b.getAttribute('data-i'), 1); lsSet(K.targets, list); renderCollect();
+        var list = cur(); list.splice(+b.getAttribute('data-i'), 1); lsSet(store(), list); renderCollect();
       };
     });
 
@@ -464,22 +532,47 @@
         .catch(function (e) { status(''); alert(e.message); });
     };
     $('mk-json').onclick = function () { $('mk-json-input').click(); };
-    $('mk-book').onclick = showBookmarklet;
+    if ($('mk-book')) $('mk-book').onclick = showBookmarklet;
   }
 
   /* Meta 廣告庫沒有公開 API，用書籤在你自己的瀏覽器頁面上取資料 */
+  /* Meta 廣告檔案庫沒有免費的公開 API。這段書籤在你自己已經開著的頁面上取資料，
+     每張圖往上找到它所屬的廣告卡片，再從卡片裡讀廣告主名稱，
+     這樣同一次搜尋裡不同品牌的廣告才不會全部掛在同一個名字下。 */
   function showBookmarklet() {
-    var code = "javascript:(function(){var s=[];document.querySelectorAll('img').forEach(function(i){" +
-      "if(i.naturalWidth>200&&i.naturalHeight>200)s.push({image:i.src,advertiserName:document.title," +
-      "id:i.src.slice(-40)});});var b=new Blob([JSON.stringify(s,null,2)],{type:'application/json'});" +
-      "var a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='meta_ads.json';a.click();})()";
+    var code = "javascript:(function(){" +
+      "function up(el){var n=el,i=0;while(n&&i<10){if(/Library ID|廣告檔案庫 ID|識別碼/.test(n.innerText||''))return n;n=n.parentElement;i++;}return null;}" +
+      "var out=[],seen={};" +
+      "document.querySelectorAll('img').forEach(function(im){" +
+      "if(im.naturalWidth<200||im.naturalHeight<200)return;" +
+      "if(seen[im.src])return;seen[im.src]=1;" +
+      "var card=up(im),name='',id='';" +
+      "if(card){var a=card.querySelector('a[href*=\"view_all_page_id\"],a[href*=\"facebook.com/\"]');" +
+      "if(a)name=(a.innerText||'').trim().split('\\n')[0];" +
+      "var m=(card.innerText||'').match(/(?:Library ID|廣告檔案庫 ID|識別碼)[:：]?\\s*(\\d+)/);if(m)id=m[1];}" +
+      "out.push({pageName:name||document.title,adArchiveId:id,image:im.src,startDate:''});});" +
+      "if(!out.length){alert('這個頁面上沒有抓到夠大的圖片。請先往下捲動讓廣告載入。');return;}" +
+      "var b=new Blob([JSON.stringify(out,null,2)],{type:'application/json'});" +
+      "var a=document.createElement('a');a.href=URL.createObjectURL(b);" +
+      "a.download='meta_ads.json';a.click();alert('已下載 '+out.length+' 筆。');})()";
+
     var out = $('mk-bookmarklet');
-    out.innerHTML = '<div class="xmeta">Meta 廣告庫沒有公開 API。做法是把下面這段存成瀏覽器書籤，' +
-      '在 Meta 廣告檔案庫的搜尋結果頁面上點它，會下載一個 JSON 檔，再用「上傳擷取檔 JSON」帶進來。</div>' +
-      '<textarea readonly rows="4" class="mp-prompt">' + esc(code) + '</textarea>' +
-      '<button class="ghost" id="bk-copy">複製書籤程式碼</button>' +
-      '<p class="caveat">建立方式：瀏覽器書籤列按右鍵 → 加入網頁 → 名稱隨意、網址貼上這段。' +
-      '它只讀取你當下看到的頁面，不會傳送任何資料到外部。抓到的圖片數量取決於頁面捲動了多少。</p>';
+    out.innerHTML = '<div class="xmeta"><b>不用 Apify 也能蒐集 Meta 素材</b>，但要手動走四步：</div>' +
+      '<ol class="steps">' +
+      '<li>把下面這段存成瀏覽器書籤（書籤列按右鍵 → 加入網頁，名稱隨意、網址貼這段）</li>' +
+      '<li>到 Meta 廣告檔案庫搜尋你要看的品牌，<b>往下捲動</b>讓廣告載入（捲多少就抓多少）</li>' +
+      '<li>點那個書籤，會下載一個 JSON 檔</li>' +
+      '<li>回來按「上傳擷取檔 JSON」把它帶進來</li>' +
+      '</ol>' +
+      '<textarea readonly rows="5" class="mp-prompt">' + esc(code) + '</textarea>' +
+      '<div class="manual-actions"><button class="ghost" id="bk-copy">複製書籤程式碼</button>' +
+      '<a class="ghost btnlink" href="https://www.facebook.com/ads/library/?active_status=all&ad_type=all&country=TW" ' +
+      'target="_blank" rel="noopener">開啟 Meta 廣告檔案庫</a></div>' +
+      '<p class="caveat">它只讀取你當下看到的頁面，不會傳送任何資料到外部。' +
+      '每張圖會往上找到所屬的廣告卡片，從卡片裡讀廣告主名稱和廣告檔案庫 ID——' +
+      '所以同一次搜尋裡不同品牌的廣告會正確分開。' +
+      'Meta 的頁面結構會改，哪天抓不到名稱時它會退回用頁面標題，那時候跟我說我來調。</p>';
+
     $('bk-copy').onclick = function () {
       var ta = out.querySelector('textarea'); ta.select();
       if (navigator.clipboard) navigator.clipboard.writeText(ta.value);
