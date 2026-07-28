@@ -612,7 +612,7 @@
   });
 
   /* ================= 匯出備份 ================= */
-  $('btn-export').addEventListener('click', function () {
+  if ($('btn-export')) $('btn-export').addEventListener('click', function () {
     var blob = new Blob([JSON.stringify({
       exported_at: new Date().toISOString(),
       materials: S.materials, daily: S.daily, dimensions: S.dimensions

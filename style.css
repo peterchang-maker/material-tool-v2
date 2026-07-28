@@ -146,3 +146,18 @@ body.readonly button:not(.link):not(#btn-signout){
 @media (max-width:760px){.g-split{grid-template-columns:1fr}}
 
 .g-comp{font-size:11px;color:var(--ai);background:var(--ai-soft);display:inline-block;padding:1px 7px;border-radius:999px;margin-bottom:5px}
+
+/* ---- 分頁 ---- */
+.tabs{display:flex;gap:2px;overflow-x:auto;padding:0 20px;background:var(--card);border-bottom:1px solid var(--line)}
+.tab{background:none;border:none;border-bottom:2px solid transparent;border-radius:0;padding:12px 14px;
+     color:var(--ink-2);white-space:nowrap;font-size:14px}
+.tab:hover{color:var(--ink)}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.panel.filters{margin:16px 20px 0}
+.tabpage{display:flex;flex-direction:column;gap:16px}
+.datagrid{display:flex;flex-wrap:wrap;gap:10px}
+.panel.todo{border-style:dashed;background:transparent}
+.panel.todo h2{font-size:14px;color:var(--ink-3)}
+.panel.todo ul{margin:10px 0 0;padding-left:20px;color:var(--ink-2);font-size:14px}
+.panel.todo li{margin:4px 0}
+@media (max-width:640px){.tabs{padding:0 8px}.tab{padding:11px 10px;font-size:13px}.panel.filters{margin:12px}}

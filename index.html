@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>素材成效分析 v2</title>
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style.css?v=4">
 </head>
 <body>
 
@@ -27,10 +27,6 @@
     <div class="brand">素材成效分析<span class="ver">v2</span></div>
     <div class="topbar-right">
       <span id="freshness" class="freshness"></span>
-      <button class="ghost" id="btn-import">匯入成效表</button>
-      <button class="ghost" id="btn-images">從 Excel 抽圖</button>
-      <button class="ghost" id="btn-market">匯入競品素材</button>
-      <button class="ghost" id="btn-migrate">從舊版搬資料</button>
       <button class="ghost" id="btn-signout">登出</button>
     </div>
   </header>
@@ -47,104 +43,171 @@
   <input type="file" id="img-input" accept=".xlsx,.xls" hidden>
   <input type="file" id="market-input" accept=".xlsx,.xls" hidden>
 
-  <main>
-    <section class="panel">
-      <div class="panel-head">
-        <h2>篩選條件</h2>
-        <button class="link" id="btn-clear-filters" hidden>清除全部</button>
-      </div>
-      <div class="filter-row">
-        <label>期間
-          <select id="f-range">
-            <option value="7">最近 7 天</option>
-            <option value="14" selected>最近 14 天</option>
-            <option value="30">最近 30 天</option>
-            <option value="0">全部</option>
-          </select>
-        </label>
-        <label>渠道 <select id="f-channel"></select></label>
-        <label>切角 <select id="f-angle"></select></label>
-        <label>賣點 <select id="f-sp"></select></label>
-        <label>搜尋素材 <input type="search" id="f-q" placeholder="關鍵字"></label>
-      </div>
-      <div id="chips" class="chips"></div>
-    </section>
+  <nav class="tabs" id="tabs">
+    <button class="tab active" data-tab="overview">大盤總覽</button>
+    <button class="tab" data-tab="wall">素材牆</button>
+    <button class="tab" data-tab="dims">維度分析</button>
+    <button class="tab" data-tab="market">市場競品</button>
+    <button class="tab" data-tab="trend">走期趨勢</button>
+    <button class="tab" data-tab="ai">AI 標籤</button>
+    <button class="tab" data-tab="data">資料與備份</button>
+  </nav>
 
-    <section class="cards" id="kpi"></section>
-
-    <section class="panel">
-      <div class="panel-head">
-        <h2>素材牆</h2>
-        <div class="panel-actions">
-          <select id="g-who">
-            <option value="ours">我方素材</option>
-            <option value="market">競品素材</option>
-            <option value="both">並排比較</option>
-          </select>
-          <span id="g-comp-wrap" style="display:none"><select id="g-comp"></select></span>
-          <label class="inline"><input type="checkbox" id="g-onlyimg"> 只看有圖的</label>
-          <select id="g-mode">
-            <option value="browse">瀏覽全部</option>
-            <option value="compare">高低 CTR 比較</option>
-            <option value="tags">檢查 AI 標籤</option>
-          </select>
-        </div>
-      </div>
-      <div id="img-progress" class="progress" hidden><span id="img-progress-text"></span></div>
-      <div id="gallery"></div>
-    </section>
-
-    <section class="panel">
-      <div class="panel-head">
-        <h2>維度表現</h2>
-        <select id="dim-select">
-          <option value="angle">依素材切角</option>
-          <option value="selling_point">依賣點</option>
-          <option value="format">依格式</option>
-          <option value="visual_type">依視覺類型</option>
+  <section class="panel filters">
+    <div class="panel-head">
+      <h2>篩選條件</h2>
+      <button class="link" id="btn-clear-filters" hidden>清除全部</button>
+    </div>
+    <div class="filter-row">
+      <label>期間
+        <select id="f-range">
+          <option value="7">最近 7 天</option>
+          <option value="14" selected>最近 14 天</option>
+          <option value="30">最近 30 天</option>
+          <option value="0">全部</option>
         </select>
-      </div>
-      <div id="dim-table"></div>
-    </section>
+      </label>
+      <label>渠道 <select id="f-channel"></select></label>
+      <label>切角 <select id="f-angle"></select></label>
+      <label>賣點 <select id="f-sp"></select></label>
+      <label>搜尋素材 <input type="search" id="f-q" placeholder="關鍵字"></label>
+    </div>
+    <div id="chips" class="chips"></div>
+  </section>
 
-    <section class="panel">
-      <div class="panel-head">
-        <h2>素材明細</h2>
-        <div class="panel-actions">
-          <span id="tag-status" class="muted"></span>
-          <button class="ghost" id="btn-tag">補打 AI 標籤</button>
+  <main>
+    <div class="tabpage" data-page="overview">
+      <section class="cards" id="kpi"></section>
+      <section class="panel">
+        <div class="panel-head"><h2>素材明細</h2>
+          <div class="panel-actions">
+            <span id="tag-status" class="muted"></span>
+            <button class="ghost" id="btn-tag">補打 AI 標籤</button>
+          </div>
         </div>
-      </div>
-      <div id="tag-progress" class="progress" hidden>
-        <span id="tag-progress-text"></span>
-        <button class="link" id="btn-tag-abort">停止</button>
-      </div>
-      <div id="mat-table" class="scroll-x"></div>
-    </section>
+        <div id="tag-progress" class="progress" hidden>
+          <span id="tag-progress-text"></span>
+          <button class="link" id="btn-tag-abort">停止</button>
+        </div>
+        <div id="mat-table" class="scroll-x"></div>
+      </section>
+    </div>
 
-    <section class="panel">
-      <div class="panel-head">
-        <h2>走期趨勢</h2>
-        <select id="trend-select"></select>
-      </div>
-      <div id="trend"></div>
-    </section>
+    <div class="tabpage" data-page="wall" hidden>
+      <section class="panel">
+        <div class="panel-head">
+          <h2>素材牆</h2>
+          <div class="panel-actions">
+            <select id="g-who">
+              <option value="ours">我方素材</option>
+              <option value="market">競品素材</option>
+              <option value="both">並排比較</option>
+            </select>
+            <span id="g-comp-wrap" style="display:none"><select id="g-comp"></select></span>
+            <label class="inline"><input type="checkbox" id="g-onlyimg"> 只看有圖的</label>
+            <select id="g-mode">
+              <option value="browse">瀏覽全部</option>
+              <option value="compare">高低 CTR 比較</option>
+              <option value="tags">檢查 AI 標籤</option>
+            </select>
+          </div>
+        </div>
+        <div id="img-progress" class="progress" hidden><span id="img-progress-text"></span></div>
+        <div id="gallery"></div>
+      </section>
+    </div>
+
+    <div class="tabpage" data-page="dims" hidden>
+      <section class="panel">
+        <div class="panel-head"><h2>維度表現</h2>
+          <select id="dim-select">
+            <option value="angle">依素材切角</option>
+            <option value="selling_point">依賣點</option>
+            <option value="format">依格式</option>
+            <option value="visual_type">依視覺類型</option>
+          </select>
+        </div>
+        <div id="dim-table"></div>
+      </section>
+      <section class="panel todo">
+        <h2>還沒搬過來</h2>
+        <ul>
+          <li>特徵 × 實際成效圖版</li>
+          <li>維度共通性排行</li>
+          <li>自訂三層維度管理</li>
+          <li>命名規則檢查</li>
+        </ul>
+      </section>
+    </div>
+
+    <div class="tabpage" data-page="market" hidden>
+      <section class="panel todo">
+        <h2>還沒搬過來</h2>
+        <p class="muted">競品素材目前可在「素材牆」分頁檢視。以下是舊版有、這裡還沒有的：</p>
+        <ul>
+          <li>Apify 自動抓取市場素材</li>
+          <li>存活天數加權切分</li>
+          <li>我方 × 市場 特徵分佈對比</li>
+          <li>Meta 廣告庫書籤</li>
+        </ul>
+      </section>
+    </div>
+
+    <div class="tabpage" data-page="trend" hidden>
+      <section class="panel">
+        <div class="panel-head"><h2>走期趨勢</h2><select id="trend-select"></select></div>
+        <div id="trend"></div>
+      </section>
+    </div>
+
+    <div class="tabpage" data-page="ai" hidden>
+      <section class="panel todo">
+        <h2>還沒搬過來</h2>
+        <p class="muted">補打標籤的按鈕目前在「大盤總覽」分頁。以下是舊版有、這裡還沒有的：</p>
+        <ul>
+          <li>Gemini API 用量與成本統計</li>
+          <li>AI 提議維度、AI 解讀差異</li>
+          <li>AI 撰寫週報文字、洞察摘要</li>
+          <li>沒有 API Key 時的手動 Prompt 流程</li>
+        </ul>
+      </section>
+    </div>
+
+    <div class="tabpage" data-page="data" hidden>
+      <section class="panel">
+        <div class="panel-head"><h2>資料進出</h2></div>
+        <div class="datagrid">
+          <button class="ghost" id="btn-import">匯入成效表</button>
+          <button class="ghost" id="btn-images">從 Excel 抽圖</button>
+          <button class="ghost" id="btn-market">匯入競品素材</button>
+          <button class="ghost" id="btn-migrate">從舊版搬資料</button>
+          <button class="ghost" id="btn-export">匯出備份</button>
+        </div>
+        <p class="muted" style="margin-top:14px">免費方案沒有自動備份，建議每週匯出一次。</p>
+      </section>
+      <section class="panel todo">
+        <h2>還沒搬過來</h2>
+        <ul>
+          <li>歷史庫（跨檔案學習）</li>
+          <li>下載圖片包 .zip</li>
+          <li>週報圖卡 PNG 匯出</li>
+          <li>Google Sheet 讀取與同步</li>
+        </ul>
+      </section>
+    </div>
   </main>
 
-  <footer class="foot">
-    <button class="ghost" id="btn-export">匯出備份</button>
-    <span class="muted">免費方案沒有自動備份，建議每週匯出一次。</span>
-  </footer>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-<script src="cloud.js"></script>
-<script src="data.js"></script>
-<script src="ai.js"></script>
-<script src="images.js"></script>
-<script src="gallery.js"></script>
-<script src="ui.js"></script>
+<script src="cloud.js?v=4"></script>
+<script src="data.js?v=4"></script>
+<script src="ai.js?v=4"></script>
+<script src="images.js?v=4"></script>
+<script src="gallery.js?v=4"></script>
+<script src="tabs.js?v=4"></script>
+<script src="ui.js?v=4"></script>
 </body>
 </html>
