@@ -26,11 +26,26 @@
   }
 
   $('login-btn').addEventListener('click', function () {
-    var btn = this; btn.disabled = true; btn.textContent = '登入中…';
-    Cloud.signIn($('login-email').value.trim(), $('login-pw').value)
-      .then(start)
-      .catch(function (e) { showLogin('登入失敗：' + (e.message || '請確認帳號密碼')); })
-      .then(function () { btn.disabled = false; btn.textContent = '登入'; });
+    var btn = this;
+    var email = $('login-email').value.trim();
+    var pw = $('login-pw').value;
+    if (!email || !pw) { showLogin('Email 和密碼都要填。'); return; }
+
+    btn.disabled = true; btn.textContent = '登入中…';
+    Cloud.signIn(email, pw)
+      .then(function () {
+        btn.disabled = false; btn.textContent = '登入';
+        start();
+      })
+      .catch(function (e) {
+        console.error('[登入失敗]', e);
+        btn.disabled = false; btn.textContent = '登入';
+        var msg = (e && (e.message || e.error_description || e.msg)) || String(e);
+        if (/invalid login/i.test(msg)) msg = 'Email 或密碼不對。';
+        else if (/not confirmed/i.test(msg)) msg = '這個帳號還沒完成驗證。請回 Supabase 把帳號刪掉重建，建立時勾選 Auto Confirm User。';
+        else if (/failed to fetch|networkerror/i.test(msg)) msg = '連不到雲端。可能是網路被擋，或公司防火牆封鎖了 supabase.co。';
+        showLogin('登入失敗：' + msg);
+      });
   });
   $('login-pw').addEventListener('keydown', function (e) { if (e.key === 'Enter') $('login-btn').click(); });
   $('btn-signout').addEventListener('click', function () {
