@@ -51,8 +51,18 @@
     return cells;
   }
 
-  function looksLikeMaterial(s) {
-    return typeof s === 'string' && s.length >= 5 && s.indexOf('_') > 0 && !/^https?:/i.test(s);
+  // 「圖影組合」這種沒有底線的命名，用舊的判定會永遠對不上。
+  // 底線改成加分條件：先找有底線的，找不到再接受一般文字。
+  var NOT_NAME = /^(素材|素材名稱|名稱|合計|總計|小計|備註|項目|日期|花費|曝光|點擊|ctr|cpc|cpm|cpa|cvr|預約|轉換|no|#)$/i;
+
+  function nameScore(s) {
+    if (typeof s !== 'string') return 0;
+    var v = s.trim();
+    if (v.length < 3 || v.length > 120) return 0;
+    if (/^https?:/i.test(v)) return 0;
+    if (/^[\d.,%$\-\s]+$/.test(v)) return 0;        // 純數字或金額
+    if (NOT_NAME.test(v)) return 0;                    // 表頭字樣
+    return v.indexOf('_') > 0 ? 2 : 1;
   }
 
   function hashBytes(bytes) {
@@ -108,14 +118,15 @@
         Object.keys(sheetDrawing).forEach(function (sp) {
           var dp = sheetDrawing[sp];
           more.push(readText(dp).then(function (x) {
-            var re = /<xdr:(?:two|one)CellAnchor[\s\S]*?<\/xdr:(?:two|one)CellAnchor>/g, m;
+            // 有些工具產生的 xlsx 不用 xdr: 前綴，寫死前綴會一張圖都找不到
+            var re = /<(?:\w+:)?(?:two|one)CellAnchor[\s\S]*?<\/(?:\w+:)?(?:two|one)CellAnchor>/g, m;
             while ((m = re.exec(x || ''))) {
               var block = m[0];
-              var from = /<xdr:from>([\s\S]*?)<\/xdr:from>/.exec(block);
-              var embed = /r:embed="([^"]+)"/.exec(block);
+              var from = /<(?:\w+:)?from>([\s\S]*?)<\/(?:\w+:)?from>/.exec(block);
+              var embed = /(?:r|relationships):embed="([^"]+)"/.exec(block) || /embed="([^"]+)"/.exec(block);
               if (!from || !embed) continue;
-              var col = /<xdr:col>(\d+)<\/xdr:col>/.exec(from[1]);
-              var row = /<xdr:row>(\d+)<\/xdr:row>/.exec(from[1]);
+              var col = /<(?:\w+:)?col>(\d+)<\/(?:\w+:)?col>/.exec(from[1]);
+              var row = /<(?:\w+:)?row>(\d+)<\/(?:\w+:)?row>/.exec(from[1]);
               var target = (drawingRels[dp] || {})[embed[1]];
               if (!target) continue;
               anchors.push({
@@ -131,18 +142,21 @@
       }).then(function (anchors) {
         // 對位：從錨點往下往旁邊找，第一個像素材名的就是它
         var OFFSETS = [];
-        for (var dr = 0; dr <= 6; dr++) for (var dc = -2; dc <= 3; dc++) OFFSETS.push([dr, dc]);
+        for (var dr = -3; dr <= 8; dr++) for (var dc = -3; dc <= 4; dc++) OFFSETS.push([dr, dc]);
         OFFSETS.sort(function (a, b) { return (Math.abs(a[0]) + Math.abs(a[1])) - (Math.abs(b[0]) + Math.abs(b[1])); });
 
         var matched = [], unmatched = 0;
         anchors.forEach(function (a) {
           var cells = sheets[a.sheet] || {};
-          var name = null;
+          var best = null, bestScore = 0, fallback = null;
           for (var i = 0; i < OFFSETS.length; i++) {
             var v = cells[(a.row + OFFSETS[i][0]) + ',' + (a.col + OFFSETS[i][1])];
-            if (looksLikeMaterial(v)) { name = v; break; }
+            var sc = nameScore(v);
+            if (sc === 2) { best = String(v).trim(); bestScore = 2; break; }
+            if (sc === 1 && !fallback) fallback = String(v).trim();
           }
-          if (name) matched.push({ name: name, media: a.media });
+          var name = best || fallback;
+          if (name) matched.push({ name: name, media: a.media, loose: bestScore !== 2 });
           else unmatched++;
         });
 
@@ -167,11 +181,30 @@
         });
 
         return Promise.all(reads).then(function (list) {
+          var mediaFiles = Object.keys(zip.files).filter(function (p) { return /^xl\/media\//.test(p); });
+          var sample = [];
+          if (anchors.length) {
+            var a0 = anchors[0], c0 = sheets[a0.sheet] || {};
+            for (var dr = -3; dr <= 8; dr++) {
+              for (var dc = -3; dc <= 4; dc++) {
+                var v = c0[(a0.row + dr) + ',' + (a0.col + dc)];
+                if (v) sample.push('(' + (a0.row + dr + 1) + ',' + (a0.col + dc + 1) + ') ' + String(v).slice(0, 40));
+              }
+            }
+          }
           return {
             images: list.filter(Boolean),
             matchedCount: matched.length,
+            looseCount: matched.filter(function (m) { return m.loose; }).length,
             unmatched: unmatched,
-            totalAnchors: anchors.length
+            totalAnchors: anchors.length,
+            diag: {
+              sheets: Object.keys(sheets),
+              drawings: Object.keys(sheetDrawing).length,
+              mediaFiles: mediaFiles.length,
+              firstAnchor: anchors.length ? (anchors[0].row + 1) + ' 列 ' + (anchors[0].col + 1) + ' 欄' : '無',
+              nearbyCells: sample.slice(0, 25)
+            }
           };
         });
       });

@@ -512,8 +512,7 @@
       Images.extract(e.target.result).then(function (res) {
         if (!res.images.length) {
           show($('img-progress'), false);
-          alert('這份檔案裡沒有找到內嵌圖片，或圖片旁邊找不到素材名稱。\n\n' +
-                '偵測到 ' + res.totalAnchors + ' 個圖片位置，其中 ' + res.unmatched + ' 個對不到素材名。');
+          showDiag(res);
           return;
         }
         var toMarket = $('g-who') && $('g-who').value === 'market';
@@ -528,6 +527,7 @@
             apply(fresh, new Date().toISOString());
             show($('img-progress'), false);
             alert('完成：' + n + ' 個素材已對上圖片。' +
+                  (res.looseCount ? '\n其中 ' + res.looseCount + ' 張是用寬鬆比對配的（附近的文字沒有底線），建議到素材牆確認。' : '') +
                   (res.unmatched ? '\n有 ' + res.unmatched + ' 張圖找不到對應的素材名，已略過。' : ''));
           });
         });
@@ -539,6 +539,34 @@
     };
     reader.readAsArrayBuffer(file);
   });
+
+  // 抽不到圖時，把程式實際看到的東西攤開來，不要只丟一句「找不到」
+  function showDiag(res) {
+    var d = res.diag || {};
+    var box = $('gallery');
+    var html = '<div class="check warn"><b>沒有抽到可用的圖片</b><br>以下是程式實際看到的東西：<ul>' +
+      '<li>工作表：' + (d.sheets || []).join('、') + '</li>' +
+      '<li>檔案裡的圖片檔數量：<b>' + (d.mediaFiles || 0) + '</b></li>' +
+      '<li>有繪圖層的工作表數：' + (d.drawings || 0) + '</li>' +
+      '<li>偵測到的圖片位置：<b>' + (res.totalAnchors || 0) + '</b>，其中對不到素材名的：' + (res.unmatched || 0) + '</li>' +
+      '<li>第一張圖的位置：' + (d.firstAnchor || '無') + '</li>' +
+      '</ul>';
+    if ((d.nearbyCells || []).length) {
+      html += '第一張圖附近有文字的儲存格：<ul>' +
+        d.nearbyCells.map(function (c) { return '<li><code>' + esc(c) + '</code></li>'; }).join('') + '</ul>';
+    } else if (res.totalAnchors) {
+      html += '第一張圖附近的儲存格<b>全部是空的</b>——素材名稱可能離圖片很遠，或在別的工作表。';
+    }
+    if (!d.mediaFiles) {
+      html += '<b>這份 Excel 裡完全沒有圖片檔。</b>圖片可能是用「連結」而不是「內嵌」的方式插入，' +
+              '或是這份檔案在傳遞過程中圖片被移除了。';
+    } else if (!res.totalAnchors) {
+      html += '檔案裡有圖片，但讀不到它們錨定在哪一格。這通常是 Excel 版本或產生工具的差異。';
+    }
+    html += '</div>';
+    box.innerHTML = html + box.innerHTML;
+    if (global.Tabs) Tabs.go('wall');
+  }
 
   /* ================= 從舊版搬資料 ================= */
   $('btn-migrate').addEventListener('click', function () {
