@@ -11,6 +11,40 @@
     });
   }
 
+  function daysBetween(a, b) {
+    if (!a || !b) return null;
+    return Math.round((new Date(b) - new Date(a)) / 86400000) + 1;
+  }
+
+  function buildMarket(state) {
+    var comp = $('g-comp') ? $('g-comp').value : '';
+    return (state.market || []).filter(function (m) { return !comp || m.competitor === comp; })
+      .map(function (m) {
+        return {
+          key: m.competitor + '|' + m.material_key,
+          name: m.material_name || m.material_key,
+          image_url: m.image_url || '',
+          tags: m.tags || {},
+          tagged: (m.tag_version || 0) >= AI.TAG_VERSION,
+          competitor: m.competitor,
+          survival: m.survival_days != null ? m.survival_days : daysBetween(m.first_seen_on, m.last_seen_on),
+          first_seen_on: m.first_seen_on, last_seen_on: m.last_seen_on
+        };
+      }).sort(function (a, b) { return (b.survival || 0) - (a.survival || 0); });
+  }
+
+  function marketCard(r) {
+    var img = r.image_url
+      ? '<img src="' + esc(r.image_url) + '" alt="' + esc(r.name) + '" loading="lazy">'
+      : '<div class="noimg">沒有圖片</div>';
+    return '<figure class="g-card"><div class="g-img">' + img + '</div><figcaption>' +
+      '<div class="g-comp">' + esc(r.competitor) + '</div>' +
+      '<div class="g-name" title="' + esc(r.name) + '">' + esc(r.name) + '</div>' +
+      '<div class="g-stats"><span>存活 <b>' + (r.survival == null ? '—' : r.survival + ' 天') + '</b></span>' +
+      (r.last_seen_on ? '<span>最後見於 ' + esc(String(r.last_seen_on).slice(5)) + '</span>' : '') +
+      '</div></figcaption></figure>';
+  }
+
   function card(r, opts) {
     opts = opts || {};
     var img = r.image_url
@@ -55,10 +89,42 @@
     });
   }
 
+  function fillCompetitors(state) {
+    var sel = $('g-comp'); if (!sel) return;
+    var cur = sel.value;
+    var names = Array.from(new Set((state.market || []).map(function (m) { return m.competitor; }).filter(Boolean))).sort();
+    sel.innerHTML = '<option value="">全部競品</option>' +
+      names.map(function (n) { return '<option value="' + esc(n) + '">' + esc(n) + '</option>'; }).join('');
+    if (names.indexOf(cur) >= 0) sel.value = cur;
+    var wrap = $('g-comp-wrap');
+    if (wrap) wrap.style.display = names.length ? '' : 'none';
+  }
+
   function render(state) {
     var box = $('gallery');
     if (!box) return;
+    fillCompetitors(state);
+    var who = $('g-who') ? $('g-who').value : 'ours';
     var mode = $('g-mode') ? $('g-mode').value : 'browse';
+
+    if (who === 'market' || who === 'both') {
+      var mkt = buildMarket(state);
+      var mHtml = mkt.length
+        ? '<div class="g-grid">' + mkt.slice(0, 120).map(marketCard).join('') + '</div>'
+        : '<div class="empty">還沒有競品素材。按「匯入競品素材」把觀測資料帶進來。</div>';
+      if (who === 'market') {
+        box.innerHTML = '<div class="muted" style="margin-bottom:10px">' +
+          '競品沒有花費與點擊，排序依存活天數：掛越久通常代表越有效。</div>' + mHtml;
+        return;
+      }
+      var ours = buildRows(state).sort(function (a, b) { return (b.ctr || 0) - (a.ctr || 0); });
+      box.innerHTML = '<div class="g-split">' +
+        '<div><h3 class="g-h">我方素材（依 CTR）</h3><div class="g-grid">' +
+        ours.slice(0, 12).map(function (r) { return card(r, {}); }).join('') + '</div></div>' +
+        '<div><h3 class="g-h">競品素材（依存活天數）</h3>' + mHtml + '</div></div>';
+      return;
+    }
+
     var onlyImg = $('g-onlyimg') ? $('g-onlyimg').checked : false;
 
     var rows = buildRows(state);

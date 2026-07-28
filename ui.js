@@ -4,7 +4,7 @@
 
   var $ = function (id) { return document.getElementById(id); };
   var S = {
-    materials: [], daily: [], dimensions: [], importLog: [],
+    materials: [], daily: [], market: [], dimensions: [], importLog: [],
     byKey: {}, cacheAt: null, filters: { range: '14', channel: '', angle: '', sp: '', q: '' },
     sortField: 'spend', sortDir: -1, pendingUpdate: null, tagCtl: null
   };
@@ -114,6 +114,7 @@
   function apply(data, at) {
     S.materials = data.materials || [];
     S.daily = data.daily || [];
+    S.market = data.market || [];
     S.dimensions = data.dimensions || [];
     S.importLog = data.importLog || [];
     S.byKey = {};
@@ -233,7 +234,7 @@
     var rows = filtered();
     if (!S.materials.length) { renderEmpty(); return; }
     renderKPI(rows); renderDim(rows); renderMaterials(rows); renderTrendSelect(rows);
-    if (global.Gallery) Gallery.render({ rows: rows, byKey: S.byKey, materials: S.materials });
+    if (global.Gallery) Gallery.render({ rows: rows, byKey: S.byKey, materials: S.materials, market: S.market });
   }
 
   function renderKPI(rows) {
@@ -265,9 +266,9 @@
     $('dim-table').innerHTML = html + '</tbody></table></div>';
   }
   $('dim-select').addEventListener('change', renderAll);
-  ['g-mode', 'g-onlyimg'].forEach(function (id) {
+  ['g-mode', 'g-onlyimg', 'g-who', 'g-comp'].forEach(function (id) {
     if ($(id)) $(id).addEventListener('change', function () {
-      if (global.Gallery) Gallery.render({ rows: filtered(), byKey: S.byKey, materials: S.materials });
+      if (global.Gallery) Gallery.render({ rows: filtered(), byKey: S.byKey, materials: S.materials, market: S.market });
     });
   });
 
@@ -424,6 +425,42 @@
       });
   }
 
+  /* ================= 匯入競品素材 ================= */
+  $('btn-market').addEventListener('click', function () { $('market-input').click(); });
+  $('market-input').addEventListener('change', function () {
+    var file = this.files[0]; if (!file) return;
+    this.value = '';
+    var reader = new FileReader();
+    reader.onload = function (e) {
+      var wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array', cellDates: false });
+      var today = new Date().toISOString().slice(0, 10);
+      var parsed = Data.parseMarketWorkbook(wb, today, '');
+
+      if (!parsed.rows.length) {
+        alert('這份檔案裡找不到競品素材。\n\n需要至少一欄是素材名稱，另外建議有「競品」和「日期」欄。');
+        return;
+      }
+      var merged = Data.mergeMarket(parsed.rows, S.market);
+      var comps = Array.from(new Set(merged.map(function (r) { return r.competitor; })));
+      if (!confirm('辨識到 ' + merged.length + ' 個競品素材，來自 ' + comps.length + ' 個競品：\n' +
+                   comps.slice(0, 8).join('、') + '\n\n要寫進雲端嗎？')) return;
+
+      banner('正在寫入競品資料…', '');
+      Cloud.saveMarket(merged)
+        .then(function () { return Cloud.loadAll(sinceDate()); })
+        .then(function (fresh) {
+          apply(fresh, new Date().toISOString());
+          banner(null);
+          if ($('g-who')) { $('g-who').value = 'market'; }
+          renderAll();
+          alert('完成：' + merged.length + ' 個競品素材已更新。\n\n' +
+                '接著按「從 Excel 抽圖」挑同一份檔案，就能把競品的圖也帶進來。');
+        })
+        .catch(function (err) { banner('寫入失敗：' + (err.message || err), 'error'); });
+    };
+    reader.readAsArrayBuffer(file);
+  });
+
   /* ================= 從 Excel 抽圖 ================= */
   $('btn-images').addEventListener('click', function () { $('img-input').click(); });
   $('img-input').addEventListener('change', function () {
@@ -440,10 +477,14 @@
                 '偵測到 ' + res.totalAnchors + ' 個圖片位置，其中 ' + res.unmatched + ' 個對不到素材名。');
           return;
         }
-        $('img-progress-text').textContent = '找到 ' + res.images.length + ' 張圖，開始上傳…';
+        var toMarket = $('g-who') && $('g-who').value === 'market';
+        var compByKey = {};
+        S.market.forEach(function (m) { compByKey[m.material_key] = m.competitor; });
+        $('img-progress-text').textContent = '找到 ' + res.images.length + ' 張圖，開始上傳' +
+          (toMarket ? '（寫入競品素材）' : '') + '…';
         return Images.uploadAll(res, function (done, total) {
           $('img-progress-text').textContent = '上傳中：' + done + ' / ' + total;
-        }).then(function (n) {
+        }, toMarket ? { target: 'market', competitorByKey: compByKey } : {}).then(function (n) {
           return Cloud.loadAll(sinceDate()).then(function (fresh) {
             apply(fresh, new Date().toISOString());
             show($('img-progress'), false);

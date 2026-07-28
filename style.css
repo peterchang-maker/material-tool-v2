@@ -144,3 +144,5 @@ body.readonly button:not(.link):not(#btn-signout){
 .g-tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:10px}
 .g-tags .ai-val{font-size:11px;padding:2px 6px}
 @media (max-width:760px){.g-split{grid-template-columns:1fr}}
+
+.g-comp{font-size:11px;color:var(--ai);background:var(--ai-soft);display:inline-block;padding:1px 7px;border-radius:999px;margin-bottom:5px}

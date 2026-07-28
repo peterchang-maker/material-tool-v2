@@ -29,6 +29,7 @@
       <span id="freshness" class="freshness"></span>
       <button class="ghost" id="btn-import">匯入成效表</button>
       <button class="ghost" id="btn-images">從 Excel 抽圖</button>
+      <button class="ghost" id="btn-market">匯入競品素材</button>
       <button class="ghost" id="btn-migrate">從舊版搬資料</button>
       <button class="ghost" id="btn-signout">登出</button>
     </div>
@@ -44,6 +45,7 @@
   <input type="file" id="file-input" accept=".xlsx,.xls" hidden>
   <input type="file" id="json-input" accept=".json" hidden>
   <input type="file" id="img-input" accept=".xlsx,.xls" hidden>
+  <input type="file" id="market-input" accept=".xlsx,.xls" hidden>
 
   <main>
     <section class="panel">
@@ -74,6 +76,12 @@
       <div class="panel-head">
         <h2>素材牆</h2>
         <div class="panel-actions">
+          <select id="g-who">
+            <option value="ours">我方素材</option>
+            <option value="market">競品素材</option>
+            <option value="both">並排比較</option>
+          </select>
+          <span id="g-comp-wrap" style="display:none"><select id="g-comp"></select></span>
           <label class="inline"><input type="checkbox" id="g-onlyimg"> 只看有圖的</label>
           <select id="g-mode">
             <option value="browse">瀏覽全部</option>

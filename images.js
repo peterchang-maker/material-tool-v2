@@ -179,7 +179,10 @@
   }
 
   /* 上傳並寫回素材主檔 */
-  function uploadAll(result, onProgress) {
+  // opts.target: 'materials'（預設）或 'market'
+  // 競品的圖沒有競品名可推，所以用已匯入的競品清單反查
+  function uploadAll(result, onProgress, opts) {
+    opts = opts || {};
     var images = result.images;
     var uploadedByHash = {};
     var rows = [];
@@ -194,12 +197,17 @@
                         uploadedByHash[img.hash] = url; return url;
                       });
         return p.then(function (url) {
-          rows.push({
-            material_key: Data.materialKey(img.name),
-            material_name: img.name,
-            image_url: url,
-            image_hash: img.hash
-          });
+          var key = Data.materialKey(img.name);
+          if (opts.target === 'market') {
+            var comp = (opts.competitorByKey || {})[key];
+            if (comp) {
+              rows.push({ competitor: comp, material_key: key, material_name: img.name,
+                          image_url: url, image_hash: img.hash });
+            }
+          } else {
+            rows.push({ material_key: key, material_name: img.name,
+                        image_url: url, image_hash: img.hash });
+          }
           done++;
           if (onProgress) onProgress(done, images.length);
         });
@@ -208,9 +216,11 @@
 
     return chain.then(function () {
       var uniq = {}, out = [];
-      rows.forEach(function (r) { uniq[r.material_key] = r; });
+      rows.forEach(function (r) { uniq[(r.competitor || '') + '|' + r.material_key] = r; });
       Object.keys(uniq).forEach(function (k) { out.push(uniq[k]); });
-      return Cloud.saveMaterials(out).then(function () { return out.length; });
+      if (!out.length) return 0;
+      var save = opts.target === 'market' ? Cloud.saveMarket(out) : Cloud.saveMaterials(out);
+      return save.then(function () { return out.length; });
     });
   }
 

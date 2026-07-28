@@ -37,7 +37,8 @@
   }
 
   /* ---------- Excel 解析 ---------- */
-  var ALIASES = {
+  var ALIASES;
+  ALIASES = {
     name: ['素材', '素材名稱', '素材名', 'creative', 'ad name', '廣告名稱'],
     date: ['日期', 'date', '統計日期', 'day'],
     channel: ['渠道', '通路', 'channel', '媒體', '版位'],
@@ -167,6 +168,74 @@
   }
 
   /* ---------- 彙總 ---------- */
+  /* ---------- 競品素材解析 ---------- */
+  // 競品資料沒有花費與點擊，只有「這個素材在哪一天還看得到」。
+  // 所以每次匯入都是一次觀測，first_seen 取最早、last_seen 取最晚，存活天數由資料庫算。
+  var MARKET_ALIASES = {
+    competitor: ['競品', '競業', '對手', '品牌', '遊戲', 'competitor', 'brand', 'app', '廣告主'],
+    name: ['素材', '素材名稱', '素材名', 'creative', 'ad name', '廣告名稱', '標題'],
+    date: ['日期', '觀測日', '擷取日', 'date', '首次出現', '上架日'],
+    last: ['最後出現', '下架日', '最後觀測', 'last seen', 'end date']
+  };
+
+  function parseMarketWorkbook(wb, fallbackDate, fallbackCompetitor) {
+    var out = { rows: [], sheets: [], skipped: 0 };
+    wb.SheetNames.forEach(function (sn) {
+      var grid = XLSX.utils.sheet_to_json(wb.Sheets[sn], { header: 1, raw: true, defval: '' });
+      if (!grid.length) return;
+      var headerRow = -1, cols = null;
+      for (var r = 0; r < Math.min(grid.length, 15); r++) {
+        var saved = ALIASES;
+        ALIASES = MARKET_ALIASES;
+        var c = { name: findCol(grid[r], 'name'), competitor: findCol(grid[r], 'competitor'),
+                  date: findCol(grid[r], 'date'), last: findCol(grid[r], 'last') };
+        ALIASES = saved;
+        if (c.name >= 0) { headerRow = r; cols = c; break; }
+      }
+      if (headerRow < 0) return;
+      out.sheets.push(sn);
+
+      for (var i = headerRow + 1; i < grid.length; i++) {
+        var row = grid[i];
+        var name = String(row[cols.name] || '').trim();
+        if (!name || name.length < 3) continue;
+        var comp = cols.competitor >= 0 ? String(row[cols.competitor] || '').trim() : '';
+        if (!comp) comp = fallbackCompetitor || sn;
+        var first = cols.date >= 0 ? toDate(row[cols.date]) : fallbackDate;
+        var last = cols.last >= 0 ? toDate(row[cols.last]) : null;
+        if (!first && !last) { out.skipped++; continue; }
+        out.rows.push({
+          competitor: comp, material_name: name, material_key: materialKey(name),
+          first_seen_on: first || last, last_seen_on: last || first
+        });
+      }
+    });
+    return out;
+  }
+
+  // 同一素材多筆觀測合併成一筆，取最早與最晚
+  function mergeMarket(newRows, existing) {
+    var map = {};
+    (existing || []).forEach(function (m) {
+      map[m.competitor + '|' + m.material_key] = {
+        competitor: m.competitor, material_key: m.material_key, material_name: m.material_name,
+        first_seen_on: m.first_seen_on, last_seen_on: m.last_seen_on
+      };
+    });
+    newRows.forEach(function (r) {
+      var k = r.competitor + '|' + r.material_key;
+      var cur = map[k];
+      if (!cur) { map[k] = { competitor: r.competitor, material_key: r.material_key,
+                             material_name: r.material_name,
+                             first_seen_on: r.first_seen_on, last_seen_on: r.last_seen_on }; return; }
+      if (r.first_seen_on && (!cur.first_seen_on || r.first_seen_on < cur.first_seen_on)) cur.first_seen_on = r.first_seen_on;
+      if (r.last_seen_on && (!cur.last_seen_on || r.last_seen_on > cur.last_seen_on)) cur.last_seen_on = r.last_seen_on;
+    });
+    var touched = {};
+    newRows.forEach(function (r) { touched[r.competitor + '|' + r.material_key] = 1; });
+    return Object.keys(touched).map(function (k) { return map[k]; });
+  }
+
   function sum(rows, f) { return rows.reduce(function (a, r) { return a + (r[f] || 0); }, 0); }
 
   function metrics(rows) {
@@ -217,6 +286,7 @@
     CHANNELS: CHANNELS,
     normalizeName: normalizeName, materialKey: materialKey, parseName: parseName,
     parseWorkbook: parseWorkbook, toDate: toDate, aggregateDaily: aggregateDaily,
-    metrics: metrics, groupBy: groupBy, trendFor: trendFor, fmt: fmt
+    metrics: metrics, groupBy: groupBy, trendFor: trendFor, fmt: fmt,
+    parseMarketWorkbook: parseMarketWorkbook, mergeMarket: mergeMarket
   };
 })(window);

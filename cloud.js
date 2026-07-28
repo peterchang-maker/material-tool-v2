@@ -88,6 +88,7 @@
     var jobs = [
       sb.from('materials').select('*').is('deleted_at', null),
       sb.from('material_daily').select('*').gte('stat_date', sinceDate).order('stat_date', { ascending: false }),
+      sb.from('market_materials').select('*').is('deleted_at', null),
       sb.from('dimensions').select('*').is('deleted_at', null).order('sort_order'),
       sb.from('import_log').select('*').order('stat_date', { ascending: false }).limit(400)
     ];
@@ -96,8 +97,9 @@
       var data = {
         materials: res[0].data || [],
         daily: res[1].data || [],
-        dimensions: res[2].data || [],
-        importLog: res[3].data || []
+        market: res[2].data || [],
+        dimensions: res[3].data || [],
+        importLog: res[4].data || []
       };
       writeCache(data);
       return data;
@@ -141,6 +143,7 @@
   function saveDaily(rows) { return upsert('material_daily', rows, 'stat_date,material_key,channel'); }
   function saveImportLog(rows) { return upsert('import_log', rows, 'stat_date,channel,source'); }
   function saveDimensions(rows) { return upsert('dimensions', rows, 'layer,name'); }
+  function saveMarket(rows) { return upsert('market_materials', rows, 'competitor,material_key'); }
   function saveSnapshot(row) { return sb.from('snapshots').insert(row).select(); }
 
   /* ---------- 圖片 ---------- */
@@ -170,6 +173,7 @@
     loadAll: loadAll, loadGaps: loadGaps, readCache: readCache, writeCache: writeCache,
     saveMaterials: saveMaterials, saveDaily: saveDaily,
     saveImportLog: saveImportLog, saveDimensions: saveDimensions, saveSnapshot: saveSnapshot,
+    saveMarket: saveMarket,
     uploadImage: uploadImage,
     queueLength: function () { return readQueue().length; },
     flushQueue: flushQueue, setOnline: setOnline, PREFIX: PREFIX
