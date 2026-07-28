@@ -245,6 +245,7 @@
       if (global.Dims) Dims.render(emptyCtx);
       if (global.AiOps) AiOps.render(emptyCtx);
       if (global.Market) Market.render(emptyCtx);
+      if (global.Exporter) Exporter.render(emptyCtx);
       return;
     }
     syncExtraDims();
@@ -254,6 +255,7 @@
     if (global.Dims) Dims.render(ctx);
     if (global.AiOps) AiOps.render(ctx);
     if (global.Market) Market.render(ctx);
+    if (global.Exporter) Exporter.render(ctx);
   }
 
   function renderKPI(rows) {
@@ -416,6 +418,8 @@
     reader.readAsArrayBuffer(file);
   });
 
+  global.__saveImport = function (parsed) { return saveImport(parsed); };
+
   function saveImport(parsed) {
     var matMap = {};
     parsed.rows.forEach(function (r) {
@@ -442,7 +446,7 @@
     });
 
     banner('正在寫入雲端…', '');
-    Cloud.saveMaterials(Object.values(matMap))
+    return Cloud.saveMaterials(Object.values(matMap))
       .then(function () { return Cloud.saveDaily(daily); })
       .then(function () { return Cloud.saveImportLog(Object.values(logs)); })
       .then(function () { return Cloud.loadAll(sinceDate()); })

@@ -247,3 +247,26 @@ body.readonly button:not(.link):not(#btn-signout){
 .dc-bar.mkt{background:#b4b2a9}
 .dc-bar.own{background:var(--accent)}
 @media (max-width:640px){.tg{flex-wrap:wrap}.tg .muted{flex-basis:100%}}
+
+/* ---- 歷史庫與輸出 ---- */
+.hist{border:1px solid var(--line);border-radius:var(--r);padding:10px 14px;margin-bottom:8px}
+.hist-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.hist-body{margin-top:12px;border-top:1px solid var(--line);padding-top:10px}
+.hist-body table{margin-bottom:12px}
+
+.card-shot{width:640px;background:#fff;padding:28px 32px;font-family:inherit;color:#16181d}
+.cs-head{display:flex;justify-content:space-between;align-items:baseline;
+         border-bottom:2px solid #0f766e;padding-bottom:10px;margin-bottom:18px}
+.cs-title{font-size:20px;font-weight:500}
+.cs-date{font-size:13px;color:#7b828c}
+.cs-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px}
+.cs-kpi{border:1px solid #e4e2dc;border-radius:8px;padding:10px 12px}
+.cs-k{font-size:11px;color:#7b828c}
+.cs-v{font-size:19px;font-weight:500;margin-top:2px}
+.cs-sec{font-size:13px;font-weight:500;margin-bottom:6px;color:#4a5058}
+.cs-tbl{width:100%;border-collapse:collapse;font-size:13px}
+.cs-tbl td{padding:6px 8px;border-bottom:1px solid #eeece6}
+.cs-tbl td:not(:first-child){text-align:right;font-variant-numeric:tabular-nums}
+.cs-note{margin-top:12px;font-size:13px;color:#0f766e}
+.cs-foot{margin-top:16px;font-size:11px;color:#a39d8c;border-top:1px solid #eeece6;padding-top:8px}
+#card-preview{margin-top:14px;overflow-x:auto}

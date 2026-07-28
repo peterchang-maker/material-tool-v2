@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>素材成效分析 v2</title>
-<link rel="stylesheet" href="style.css?v=10">
+<link rel="stylesheet" href="style.css?v=11">
 </head>
 <body>
 
@@ -239,16 +239,56 @@
         </div>
         <p class="muted" style="margin-top:14px">免費方案沒有自動備份，建議每週匯出一次。</p>
       </section>
-      <section class="panel todo">
-        <h2>還沒搬過來</h2>
-        <ul>
-          <li>歷史庫（跨檔案學習）</li>
-          <li>下載圖片包 .zip</li>
-          <li>週報圖卡 PNG 匯出</li>
-          <li>Google Sheet 讀取與同步</li>
-        </ul>
+
+      <section class="panel">
+        <div class="panel-head"><h2>從 Google Sheet 讀取</h2>
+          <button class="ghost" id="btn-gs">讀取</button>
+        </div>
+        <div class="filter-row">
+          <label style="flex:1">Apps Script 網址
+            <input id="gs-url" placeholder="https://script.google.com/macros/s/.../exec">
+          </label>
+        </div>
+        <div id="gs-status" class="xmeta"></div>
+        <p class="caveat">Google Sheet 沒辦法從網頁直接跨站讀取，要在試算表上部署一支 Apps Script
+          當中介，回傳 <code>{ok:true, activeSheet:"分頁名", data:[[...]]}</code> 這種格式。
+          部署時「誰可以存取」要選任何人。</p>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2>歷史庫</h2>
+          <button class="ghost" id="btn-snapshot">存入歷史庫</button>
+        </div>
+        <div class="xmeta">存的是當時算出來的結論（各切角與賣點的花費、CTR、CPA），不是原始資料。
+          展開後可以跟目前的篩選範圍直接比較。</div>
+        <div id="hist-status" class="xmeta"></div>
+        <div id="history"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2>圖片包</h2>
+          <div class="panel-actions">
+            <select id="zip-who">
+              <option value="ours">我方素材</option>
+              <option value="market">競品素材</option>
+            </select>
+            <button class="ghost" id="btn-zip">下載 .zip</button>
+          </div>
+        </div>
+        <div id="zip-status" class="xmeta"></div>
+        <p class="caveat">一次最多 300 張。競品素材的圖片放在對方網站上，有些會擋跨站讀取，
+          抓不到的會略過並回報數量。</p>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2>週報圖卡</h2>
+          <button class="ghost" id="btn-card">產生 PNG</button>
+        </div>
+        <div id="card-status" class="xmeta"></div>
+        <div id="card-preview"></div>
       </section>
     </div>
+
   </main>
 
 </div>
@@ -256,15 +296,17 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-<script src="cloud.js?v=10"></script>
-<script src="data.js?v=10"></script>
-<script src="ai.js?v=10"></script>
-<script src="images.js?v=10"></script>
-<script src="gallery.js?v=10"></script>
-<script src="dims.js?v=10"></script>
-<script src="aiops.js?v=10"></script>
-<script src="market.js?v=10"></script>
-<script src="tabs.js?v=10"></script>
-<script src="ui.js?v=10"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="cloud.js?v=11"></script>
+<script src="data.js?v=11"></script>
+<script src="ai.js?v=11"></script>
+<script src="images.js?v=11"></script>
+<script src="gallery.js?v=11"></script>
+<script src="dims.js?v=11"></script>
+<script src="aiops.js?v=11"></script>
+<script src="market.js?v=11"></script>
+<script src="export.js?v=11"></script>
+<script src="tabs.js?v=11"></script>
+<script src="ui.js?v=11"></script>
 </body>
 </html>
