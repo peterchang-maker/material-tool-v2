@@ -144,7 +144,19 @@
   function saveImportLog(rows) { return upsert('import_log', rows, 'stat_date,channel,source'); }
   function saveDimensions(rows) { return upsert('dimensions', rows, 'layer,name'); }
   function saveMarket(rows) { return upsert('market_materials', rows, 'competitor,material_key'); }
-  function saveSnapshot(row) { return sb.from('snapshots').insert(row).select(); }
+  function saveSnapshot(row) {
+    return sb.from('snapshots').insert(row).select().then(function (r) {
+      if (r.error) throw new Error(r.error.message);
+      return r.data;
+    });
+  }
+  function softDelete(table, id) {
+    return sb.from(table).update({ deleted_at: new Date().toISOString() }).eq('id', id)
+      .then(function (r) {
+        if (r.error) throw new Error(r.error.message);
+        return true;
+      });
+  }
 
   /* ---------- 圖片 ---------- */
   function uploadImage(fileOrBlob, hash, ext) {
@@ -173,7 +185,7 @@
     loadAll: loadAll, loadGaps: loadGaps, readCache: readCache, writeCache: writeCache,
     saveMaterials: saveMaterials, saveDaily: saveDaily,
     saveImportLog: saveImportLog, saveDimensions: saveDimensions, saveSnapshot: saveSnapshot,
-    saveMarket: saveMarket,
+    saveMarket: saveMarket, softDelete: softDelete,
     uploadImage: uploadImage,
     queueLength: function () { return readQueue().length; },
     flushQueue: flushQueue, setOnline: setOnline, PREFIX: PREFIX

@@ -40,8 +40,7 @@
     Cloud.saveSnapshot({
       kind: 'analysis', title: label.trim() || (p.from + ' ~ ' + p.to),
       payload: p, date_from: p.from, date_to: p.to
-    }).then(function () { return loadSnapshots(); })
-      .then(function () { status('hist-status', '已存入歷史庫。'); })
+    }).then(function () { return loadSnapshots(); }).then(function () { status('hist-status', '已存入歷史庫。'); })
       .catch(function (e) { status('hist-status', '儲存失敗：' + e.message); });
   }
 
@@ -86,8 +85,10 @@
     Array.prototype.forEach.call(box.querySelectorAll('.hist-del'), function (b) {
       b.onclick = function () {
         if (!confirm('刪除歷史紀錄「' + b.getAttribute('data-t') + '」？')) return;
-        Cloud.sb.from('snapshots').update({ deleted_at: new Date().toISOString() })
-          .eq('id', b.getAttribute('data-id')).then(loadSnapshots);
+        b.disabled = true;
+        Cloud.softDelete('snapshots', b.getAttribute('data-id'))
+          .then(loadSnapshots)
+          .catch(function (e) { b.disabled = false; alert('刪除失敗：' + e.message); });
       };
     });
 
@@ -142,8 +143,9 @@
           return r.blob();
         }).then(function (b) {
           var ext = (b.type.split('/')[1] || 'png').replace('jpeg', 'jpg');
+          // 同名素材會互相覆蓋而且不會報錯，所以加序號
           var safe = it.name.replace(/[\/\\:*?"<>|]/g, '_').slice(0, 80);
-          zip.file(safe + '.' + ext, b);
+          zip.file(String(i + 1).padStart(3, '0') + '_' + safe + '.' + ext, b);
           ok++;
         }).catch(function () { fail++; });
       });
@@ -233,7 +235,9 @@
         if (global.__saveImport) return global.__saveImport(parsed);
         throw new Error('匯入流程沒有就緒');
       })
-      .then(function () { status('gs-status', '完成。'); })
+      .then(function (r) {
+        status('gs-status', r && r.ok === false ? '寫入失敗，詳見上方訊息。' : '完成。');
+      })
       .catch(function (e) {
         clearTimeout(timer);
         status('gs-status', '讀取失敗：' + (e.name === 'AbortError' ? '超過 30 秒沒有回應' : e.message));

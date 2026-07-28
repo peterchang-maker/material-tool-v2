@@ -456,9 +456,11 @@
         document.body.classList.remove('readonly');
         alert('匯入完成：' + Object.keys(matMap).length + ' 個素材、' + daily.length + ' 筆每日資料。' +
               (parsed.merged ? '\n（有 ' + parsed.merged + ' 列是同一天同一素材的重複紀錄，已自動加總）' : ''));
+        return { ok: true };
       })
       .catch(function (e) {
         banner('寫入失敗，這批資料已排進佇列，恢復連線後會自動送出。（' + e.message + '）', 'error');
+        return { ok: false };
       });
   }
 

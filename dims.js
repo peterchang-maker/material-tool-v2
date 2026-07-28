@@ -315,9 +315,9 @@
       btn.onclick = function () {
         if (!confirm('刪除維度「' + btn.getAttribute('data-name') + '」？\n已經標好的資料不會被清掉，只是之後不再標這一維。')) return;
         btn.disabled = true;
-        Cloud.sb.from('dimensions').update({ deleted_at: new Date().toISOString() })
-          .eq('id', btn.getAttribute('data-id'))
-          .then(function () { if (global.__reload) global.__reload(); });
+        Cloud.softDelete('dimensions', btn.getAttribute('data-id'))
+          .then(function () { if (global.__reload) global.__reload(); })
+          .catch(function (e) { btn.disabled = false; alert('刪除失敗：' + e.message); });
       };
     });
   }
