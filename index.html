@@ -28,6 +28,7 @@
     <div class="topbar-right">
       <span id="freshness" class="freshness"></span>
       <button class="ghost" id="btn-import">匯入成效表</button>
+      <button class="ghost" id="btn-images">從 Excel 抽圖</button>
       <button class="ghost" id="btn-migrate">從舊版搬資料</button>
       <button class="ghost" id="btn-signout">登出</button>
     </div>
@@ -42,6 +43,7 @@
 
   <input type="file" id="file-input" accept=".xlsx,.xls" hidden>
   <input type="file" id="json-input" accept=".json" hidden>
+  <input type="file" id="img-input" accept=".xlsx,.xls" hidden>
 
   <main>
     <section class="panel">
@@ -67,6 +69,22 @@
     </section>
 
     <section class="cards" id="kpi"></section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <h2>素材牆</h2>
+        <div class="panel-actions">
+          <label class="inline"><input type="checkbox" id="g-onlyimg"> 只看有圖的</label>
+          <select id="g-mode">
+            <option value="browse">瀏覽全部</option>
+            <option value="compare">高低 CTR 比較</option>
+            <option value="tags">檢查 AI 標籤</option>
+          </select>
+        </div>
+      </div>
+      <div id="img-progress" class="progress" hidden><span id="img-progress-text"></span></div>
+      <div id="gallery"></div>
+    </section>
 
     <section class="panel">
       <div class="panel-head">
@@ -113,9 +131,12 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="cloud.js"></script>
 <script src="data.js"></script>
 <script src="ai.js"></script>
+<script src="images.js"></script>
+<script src="gallery.js"></script>
 <script src="ui.js"></script>
 </body>
 </html>

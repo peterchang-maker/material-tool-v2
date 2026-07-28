@@ -75,8 +75,9 @@
       return Cloud.loadGaps();
     }).then(renderGaps)
       .catch(function (e) {
-        console.error(e);
-        banner('連不上雲端，畫面顯示的是本機暫存的資料。修改暫時不會存回雲端。', 'offline');
+        console.error('[讀取雲端失敗]', e);
+        var msg = (e && (e.message || e.hint || e.details)) || String(e);
+        banner('連不上雲端：' + msg + '（畫面顯示的是本機暫存資料，修改暫時不會存回雲端）', 'offline');
         document.body.classList.add('readonly');
       });
   }
@@ -223,6 +224,8 @@
   function renderEmpty() {
     $('mat-table').innerHTML = '<div class="empty">還沒有任何資料。先匯入一份成效表，或把舊版的資料搬過來。</div>';
     $('kpi').innerHTML = ''; $('dim-table').innerHTML = ''; $('trend').innerHTML = '';
+    if ($('gallery')) $('gallery').innerHTML =
+      '<div class="empty">還沒有素材。先匯入成效表，再按「從 Excel 抽圖」把圖片帶進來。</div>';
   }
 
   function renderAll() {
@@ -230,6 +233,7 @@
     var rows = filtered();
     if (!S.materials.length) { renderEmpty(); return; }
     renderKPI(rows); renderDim(rows); renderMaterials(rows); renderTrendSelect(rows);
+    if (global.Gallery) Gallery.render({ rows: rows, byKey: S.byKey, materials: S.materials });
   }
 
   function renderKPI(rows) {
@@ -261,6 +265,11 @@
     $('dim-table').innerHTML = html + '</tbody></table></div>';
   }
   $('dim-select').addEventListener('change', renderAll);
+  ['g-mode', 'g-onlyimg'].forEach(function (id) {
+    if ($(id)) $(id).addEventListener('change', function () {
+      if (global.Gallery) Gallery.render({ rows: filtered(), byKey: S.byKey, materials: S.materials });
+    });
+  });
 
   function renderMaterials(rows) {
     var agg = {};
@@ -414,6 +423,42 @@
         banner('寫入失敗，這批資料已排進佇列，恢復連線後會自動送出。（' + e.message + '）', 'error');
       });
   }
+
+  /* ================= 從 Excel 抽圖 ================= */
+  $('btn-images').addEventListener('click', function () { $('img-input').click(); });
+  $('img-input').addEventListener('change', function () {
+    var file = this.files[0]; if (!file) return;
+    this.value = '';
+    var reader = new FileReader();
+    reader.onload = function (e) {
+      show($('img-progress'), true, 'flex');
+      $('img-progress-text').textContent = '正在解開檔案…';
+      Images.extract(e.target.result).then(function (res) {
+        if (!res.images.length) {
+          show($('img-progress'), false);
+          alert('這份檔案裡沒有找到內嵌圖片，或圖片旁邊找不到素材名稱。\n\n' +
+                '偵測到 ' + res.totalAnchors + ' 個圖片位置，其中 ' + res.unmatched + ' 個對不到素材名。');
+          return;
+        }
+        $('img-progress-text').textContent = '找到 ' + res.images.length + ' 張圖，開始上傳…';
+        return Images.uploadAll(res, function (done, total) {
+          $('img-progress-text').textContent = '上傳中：' + done + ' / ' + total;
+        }).then(function (n) {
+          return Cloud.loadAll(sinceDate()).then(function (fresh) {
+            apply(fresh, new Date().toISOString());
+            show($('img-progress'), false);
+            alert('完成：' + n + ' 個素材已對上圖片。' +
+                  (res.unmatched ? '\n有 ' + res.unmatched + ' 張圖找不到對應的素材名，已略過。' : ''));
+          });
+        });
+      }).catch(function (err) {
+        show($('img-progress'), false);
+        console.error('[抽圖失敗]', err);
+        banner('抽圖失敗：' + (err.message || err), 'error');
+      });
+    };
+    reader.readAsArrayBuffer(file);
+  });
 
   /* ================= 從舊版搬資料 ================= */
   $('btn-migrate').addEventListener('click', function () {

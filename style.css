@@ -123,3 +123,24 @@ body.readonly button:not(.link):not(#btn-signout){
   th,td{padding:7px 8px}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+/* ---- 素材牆 ---- */
+.inline{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--ink-2)}
+.inline input{width:auto}
+.g-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:14px}
+.g-grid.wide{grid-template-columns:repeat(auto-fill,minmax(260px,1fr))}
+.g-split{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+.g-h{font-size:14px;font-weight:500;margin:0 0 10px;color:var(--ink-2)}
+.g-card{margin:0;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--card)}
+.g-card.rank-top{border-color:var(--accent)}
+.g-card.rank-low{border-color:var(--danger)}
+.g-img{aspect-ratio:1/1;background:#f4f2ed;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.g-img img{width:100%;height:100%;object-fit:contain}
+.noimg{font-size:12px;color:var(--ink-3)}
+.g-card figcaption{padding:10px 12px}
+.g-name{font-size:13px;line-height:1.4;word-break:break-all;max-height:3.6em;overflow:hidden}
+.g-stats{display:flex;flex-wrap:wrap;gap:10px;margin-top:8px;font-size:12px;color:var(--ink-3)}
+.g-stats b{font-weight:500;color:var(--ink)}
+.g-tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:10px}
+.g-tags .ai-val{font-size:11px;padding:2px 6px}
+@media (max-width:760px){.g-split{grid-template-columns:1fr}}
