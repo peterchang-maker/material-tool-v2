@@ -2,6 +2,7 @@
 (function (global) {
   'use strict';
 
+  var BATCH_SIZE = 20;
   var TAG_VERSION = 1;                       // 維度改了就把這個加一，舊素材會自動被算成「待補標」
   var KEY_STORE = 'mt2_gemini_key';          // 只存本機，不上雲
   var MODEL_KEY = 'mt2_gemini_model';
@@ -44,7 +45,7 @@
     var p = PRICING[getModel()] || PRICING._default;
     return m.inTok / 1e6 * p.in + m.outTok / 1e6 * p.out;
   }
-  var COST_PER_MATERIAL_TWD = 0.12;          // 粗估，實際以帳單為準
+
 
   var TAG_SCHEMA = {
     視覺: ['色調', '主色系', '人物類型', '人物大小占比', '人物動作姿態',
@@ -74,7 +75,16 @@
       return false;
     });
   }
-  function estimateCost(n) { return n * COST_PER_MATERIAL_TWD; }
+  // 用實際牌價估，不用固定單價——固定單價會跟用量頁的數字互相矛盾。
+  // 一批 20 筆：輸入約 400 token 的維度說明加上每筆約 30 token 的素材名；輸出每筆約 220 token。
+  function estimateCost(n) {
+    var p = PRICING[getModel()] || PRICING._default;
+    var batches = Math.ceil(n / BATCH_SIZE);
+    var inTok = batches * 400 + n * 30;
+    var outTok = n * 220;
+    return inTok / 1e6 * p.in + outTok / 1e6 * p.out;   // 回傳 USD
+  }
+  function costText(c) { return 'US$' + (c > 0 && c < 0.01 ? c.toFixed(4) : c.toFixed(2)); }
 
   function buildPrompt(names) {
     var want = expectedDims();
@@ -125,7 +135,7 @@
   function tagBatch(materials, opts) {
     opts = opts || {};
     var todo = pending(materials);
-    var BATCH = 20;
+    var BATCH = BATCH_SIZE;
     var done = 0, results = [], aborted = false;
     var ctl = { abort: function () { aborted = true; } };
 
@@ -151,7 +161,7 @@
                   tags: tags,
                   tag_version: TAG_VERSION,
                   tagged_at: new Date().toISOString(),
-                  tag_cost_twd: COST_PER_MATERIAL_TWD
+                  tag_cost_twd: 0
                 });
               });
               done += slice.length;
@@ -172,7 +182,7 @@
     getKey: getKey, setKey: setKey, setExtraDims: setExtraDims, expectedDims: expectedDims,
     getModel: getModel, setModel: setModel, readUsage: readUsage, usageCost: usageCost,
     monthKey: monthKey, PRICING: PRICING,
-    pending: pending, estimateCost: estimateCost,
+    pending: pending, estimateCost: estimateCost, costText: costText,
     buildPrompt: buildPrompt, normalizeAiText: normalizeAiText,
     callGemini: callGemini, tagBatch: tagBatch
   };

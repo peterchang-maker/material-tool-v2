@@ -320,7 +320,9 @@
     });
 
     var untagged = list.filter(function (r) { return !r.tagged; }).length;
-    $('tag-status').textContent = untagged ? untagged + ' 筆未標記，預估 $' + AI.estimateCost(untagged).toFixed(0) : '全部已標記';
+    $('tag-status').textContent = untagged
+      ? untagged + ' 筆未標記，預估 ' + AI.costText(AI.estimateCost(untagged))
+      : (list.length ? '全部已標記' : '');
     $('btn-tag').disabled = !untagged;
 
     var cols = [['name', '素材'], ['days', '在跑天數'], ['spend', '花費'], ['impressions', '曝光'],
@@ -612,7 +614,7 @@
     }
     var todo = AI.pending(S.materials);
     if (!todo.length) return;
-    if (!confirm('要補標 ' + todo.length + ' 筆素材，預估花費 $' + AI.estimateCost(todo.length).toFixed(0) + '。\n\n中途可以按「停止」，已標好的會保留。要開始嗎？')) return;
+    if (!confirm('要補標 ' + todo.length + ' 筆素材，預估花費 ' + AI.costText(AI.estimateCost(todo.length)) + '。\n\n中途可以按「停止」，已標好的會保留。要開始嗎？')) return;
 
     show($('tag-progress'), true, 'flex');
     $('btn-tag').disabled = true;

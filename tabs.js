@@ -4,7 +4,8 @@
   var KEY = 'mt2_tab';
 
   // 篩選條件只跟這幾頁有關，其他頁面不顯示，免得誤以為有套用
-  var NEEDS_FILTER = { overview: 1, wall: 1, dims: 1, trend: 1 };
+  // AI 分頁也要顯示：週報與提議維度都吃篩選條件，藏起來會讓人拿到錯的範圍還不知道
+  var NEEDS_FILTER = { overview: 1, wall: 1, dims: 1, trend: 1, ai: 1 };
 
   function go(name) {
     var pages = document.querySelectorAll('.tabpage');

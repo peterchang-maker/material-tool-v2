@@ -43,9 +43,12 @@
   function fmtCost(c) { return c > 0 && c < 0.01 ? c.toFixed(4) : c.toFixed(2); }
 
   /* ============ 金鑰與型號 ============ */
+  var keyBarState = null;
   function renderKeyBar() {
     var el = $('api-key-bar'); if (!el) return;
     var on = !!AI.getKey();
+    if (keyBarState === on && el.innerHTML) return;
+    keyBarState = on;
     el.innerHTML =
       '<span class="apibadge ' + (on ? 'on' : 'off') + '">' + (on ? '金鑰已設定' : '尚未設定金鑰') + '</span>' +
       '<input id="ai-model" value="' + esc(AI.getModel()) + '" style="width:180px" title="Gemini 型號">' +
@@ -280,8 +283,7 @@
     var st = $('ai-tagline');
     if (st) {
       st.innerHTML = pend
-        ? pend + ' 個素材待標記（含新增維度後需要補的），預估 US$' +
-          fmtCost(pend * 0.0004) + ' 上下'
+        ? pend + ' 個素材待標記（含新增維度後需要補的），預估 ' + AI.costText(AI.estimateCost(pend))
         : '所有素材都標記完成了。';
     }
 
