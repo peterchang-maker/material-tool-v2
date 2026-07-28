@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>素材成效分析 v2</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="banner" class="banner" hidden></div>
+
+<div id="login" class="login" hidden>
+  <div class="login-box">
+    <h1>素材成效分析</h1>
+    <p class="muted">請登入以讀取雲端資料。</p>
+    <label>Email<input type="email" id="login-email" autocomplete="username"></label>
+    <label>密碼<input type="password" id="login-pw" autocomplete="current-password"></label>
+    <button class="primary" id="login-btn">登入</button>
+    <p class="err" id="login-err" hidden></p>
+  </div>
+</div>
+
+<div id="app" hidden>
+
+  <header class="topbar">
+    <div class="brand">素材成效分析<span class="ver">v2</span></div>
+    <div class="topbar-right">
+      <span id="freshness" class="freshness"></span>
+      <button class="ghost" id="btn-import">匯入成效表</button>
+      <button class="ghost" id="btn-migrate">從舊版搬資料</button>
+      <button class="ghost" id="btn-signout">登出</button>
+    </div>
+  </header>
+
+  <div id="update-prompt" class="update-prompt" hidden>
+    <span>雲端有較新的資料。</span>
+    <button class="link" id="btn-apply-update">更新畫面</button>
+  </div>
+
+  <div id="gaps" class="notice" hidden></div>
+
+  <input type="file" id="file-input" accept=".xlsx,.xls" hidden>
+  <input type="file" id="json-input" accept=".json" hidden>
+
+  <main>
+    <section class="panel">
+      <div class="panel-head">
+        <h2>篩選條件</h2>
+        <button class="link" id="btn-clear-filters" hidden>清除全部</button>
+      </div>
+      <div class="filter-row">
+        <label>期間
+          <select id="f-range">
+            <option value="7">最近 7 天</option>
+            <option value="14" selected>最近 14 天</option>
+            <option value="30">最近 30 天</option>
+            <option value="0">全部</option>
+          </select>
+        </label>
+        <label>渠道 <select id="f-channel"></select></label>
+        <label>切角 <select id="f-angle"></select></label>
+        <label>賣點 <select id="f-sp"></select></label>
+        <label>搜尋素材 <input type="search" id="f-q" placeholder="關鍵字"></label>
+      </div>
+      <div id="chips" class="chips"></div>
+    </section>
+
+    <section class="cards" id="kpi"></section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <h2>維度表現</h2>
+        <select id="dim-select">
+          <option value="angle">依素材切角</option>
+          <option value="selling_point">依賣點</option>
+          <option value="format">依格式</option>
+          <option value="visual_type">依視覺類型</option>
+        </select>
+      </div>
+      <div id="dim-table"></div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <h2>素材明細</h2>
+        <div class="panel-actions">
+          <span id="tag-status" class="muted"></span>
+          <button class="ghost" id="btn-tag">補打 AI 標籤</button>
+        </div>
+      </div>
+      <div id="tag-progress" class="progress" hidden>
+        <span id="tag-progress-text"></span>
+        <button class="link" id="btn-tag-abort">停止</button>
+      </div>
+      <div id="mat-table" class="scroll-x"></div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <h2>走期趨勢</h2>
+        <select id="trend-select"></select>
+      </div>
+      <div id="trend"></div>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <button class="ghost" id="btn-export">匯出備份</button>
+    <span class="muted">免費方案沒有自動備份，建議每週匯出一次。</span>
+  </footer>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="cloud.js"></script>
+<script src="data.js"></script>
+<script src="ai.js"></script>
+<script src="ui.js"></script>
+</body>
+</html>
