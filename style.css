@@ -8,6 +8,7 @@
   --r:8px;
 }
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 body{
   margin:0; background:var(--paper); color:var(--ink);
   font:400 15px/1.6 -apple-system,"Segoe UI","Noto Sans TC","PingFang TC",sans-serif;
