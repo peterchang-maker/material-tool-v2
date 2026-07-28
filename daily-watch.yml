@@ -1,0 +1,19 @@
+name: 競品每日監控
+on:
+  schedule:
+    - cron: '0 1 * * *'   # UTC 01:00 = 台灣 09:00
+  workflow_dispatch:        # 也可以在 Actions 頁面手動觸發
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: 執行爬蟲
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: node scraper/scrape.js

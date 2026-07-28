@@ -259,6 +259,7 @@
     if (global.AiOps) AiOps.render(ctx);
     if (global.Market) Market.render(ctx);
     if (global.Exporter) Exporter.render(ctx);
+    if (global.Watch) Watch.render();
   }
 
   function renderKPI(rows) {

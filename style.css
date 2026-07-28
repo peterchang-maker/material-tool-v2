@@ -277,3 +277,8 @@ details.adv textarea{width:100%;margin-top:10px;font:12px/1.6 monospace;padding:
                      border:1px solid var(--line);border-radius:var(--r);background:#faf9f6;resize:vertical}
 .steps{margin:8px 0 12px;padding-left:22px;font-size:14px;line-height:1.9}
 .steps li{margin:2px 0}
+
+.sig-row{display:flex;gap:10px;font-size:13px;margin:5px 0;align-items:baseline}
+.sig-src{font-size:11px;color:var(--ink-3);min-width:76px}
+.sig-sample{font-size:12px;color:var(--ink-2);background:#faf9f6;border-left:2px solid var(--line);
+            padding:4px 8px;margin:3px 0 3px 86px;border-radius:0 4px 4px 0}
